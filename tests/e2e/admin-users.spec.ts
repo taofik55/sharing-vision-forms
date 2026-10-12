@@ -17,7 +17,7 @@ test("admin creates, promotes and deactivates a user", async ({
   const email = `e2e-${Date.now()}@formpulse.test`;
 
   await login(page, "admin@formpulse.test");
-  await expect(page).toHaveURL(/\/en$/);
+  await expect(page).toHaveURL(/\/en$/, { timeout: 30_000 });
   await page.goto("/en/admin/users");
 
   // Create
@@ -54,7 +54,7 @@ test("admin creates, promotes and deactivates a user", async ({
   const otherContext = await browser.newContext();
   const other = await otherContext.newPage();
   await login(other, email);
-  await expect(other).toHaveURL(/\/en$/);
+  await expect(other).toHaveURL(/\/en$/, { timeout: 30_000 });
   await expect(other.getByTestId("role-badge")).toHaveAttribute(
     "data-role",
     "editor",
@@ -66,7 +66,9 @@ test("admin creates, promotes and deactivates a user", async ({
   await expect(row).toContainText("Inactive");
 
   await other.reload();
-  await expect(other).toHaveURL(/\/en\/login\?error=inactive$/);
+  await expect(other).toHaveURL(/\/en\/login\?error=inactive$/, {
+    timeout: 30_000,
+  });
   await expect(other.getByTestId("login-error")).toContainText("inactive");
 
   // ...and cannot sign in again

@@ -4,6 +4,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { RoleBadge } from "@/components/layout/role-badge";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { QueryProvider } from "@/components/providers/query-provider";
 import { UserMenu } from "@/components/layout/user-menu";
 import { getNavItems } from "@/lib/auth/roles";
 import { requireUser } from "@/lib/auth/session";
@@ -43,7 +44,9 @@ export default async function AppLayout({
             <UserMenu fullName={user.fullName} email={user.email} />
           </div>
         </header>
-        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
+        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+          <QueryProvider>{children}</QueryProvider>
+        </main>
       </div>
     </div>
   );

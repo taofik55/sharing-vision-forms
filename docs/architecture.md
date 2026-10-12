@@ -157,7 +157,7 @@ Triggers:
 - `form_versions_immutable` → blocks UPDATE and DELETE (except the cascade from deleting the form).
 - `set_updated_at` on `forms`, `dashboards`, `response_drafts`.
 
-Realtime: `public.responses` is in the `supabase_realtime` publication; RLS still applies to subscribers.
+Realtime: `public.responses` is in the `supabase_realtime` publication; RLS still applies to subscribers, and since Phase 4 the identifier columns are not granted to `authenticated`, so payloads omit them.
 
 Why the forms SELECT policy matches the owner directly: `INSERT ... RETURNING` re-checks the SELECT policy on the new row, and `can_view_form()` (STABLE, its own snapshot) cannot see a row inserted by the same statement.
 
@@ -204,6 +204,66 @@ The anon (publishable) key has no table access and cannot execute any of these R
 
 Typed answer columns: text types → `value_text`; number / rating / linear_scale → `value_number`; date → `value_date`; choice types → `value_options` (option ids); "Other" text → `value_text`.
 
+## Dashboard data layer (Phase 4)
+
+### Security model
+
+Analytics RPCs are `SECURITY DEFINER`, `search_path = ''`, and start with `_assert_can_view(form_id)`:
+
+- signed-in callers must pass `can_view_form(form_id)` (else SQLSTATE 42501);
+- the secret key (`service_role`, no `auth.uid()`) is allowed, so the Phase 5 public dashboard can call the same functions after it has validated a share token;
+- `anon` has no EXECUTE on any of them; internal helpers (`_*`) are not executable by any API role.
+
+Why not `SECURITY INVOKER`: RLS would evaluate `can_view_form()` for every `response_answers` row (≈100k rows at 10k responses). One explicit check per call is faster and easier to audit.
+
+Identifiers: `authenticated` can select every `responses` column except `identifier_email`, `identifier_phone`, `identifier_key` and `submission_token` (column privileges). `list_responses` / `get_response` return them in full to users with `can_edit_form` and masked (`a***@example.com`, `***789`) to everyone else. Realtime payloads respect the column grants.
+
+| RPC                                                                                                        | Purpose                                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `dashboard_bundle(form_id, filters)`                                                                       | Overview + every question's stats in one call (`form`, `overview`, `questions`).                                                           |
+| `dashboard_overview(form_id, filters)`                                                                     | Totals, WIB "today" / last 7 vs previous 7 days, previous period, timeline, heatmap, durations, device / language split, funnel, versions. |
+| `question_stats(form_id, key, filters)`                                                                    | Type-specific statistics for one question.                                                                                                 |
+| `cross_stats(form_id, a, b, filters)`                                                                      | Contingency + Cramér's V, group means, or Pearson r (n ≥ 30).                                                                              |
+| `cross_suggestions(form_id, filters)`                                                                      | Up to 4 ranked relationships among current-version candidates.                                                                             |
+| `question_text_answers(form_id, key, filters, before_at, before_id, limit)`                                | Latest raw text answers, keyset-paginated.                                                                                                 |
+| `list_responses(form_id, filters, search, sort, cursor, limit)`                                            | Responses table: keyset pagination, search, sort, masking.                                                                                 |
+| `get_response(response_id)`                                                                                | One response with typed answers (masked for viewers).                                                                                      |
+| `generate_demo_responses(form_id, n, days)`, `delete_demo_responses(form_id)`, `analyze_response_tables()` | Demo data, secret key only.                                                                                                                |
+
+Filters (jsonb): `{ from, to, versionIds?, answers: [{ questionKey, operator: "any_of", values }], device?, locale? }`. `to` is exclusive. Every statistic includes `n` and `low_sample` (n < 30).
+
+### Query design and performance
+
+`_dashboard_responses(form_id, filters)` yields the filtered response set (uses `responses (form_id, submitted_at)` for date ranges; answer filters are `NOT EXISTS` probes on `response_answers (response_id)`). `_bundle_questions` then reads the form's answers once (directly when there are no row filters, otherwise semi-joined to that set), computes counts / averages / quantiles in one hash + ordered-set aggregate pass, and options, pairs, distributions, histograms, dates and terms in a few typed passes, all grouped by `question_key`. Per-question JSON is assembled from those maps. The function runs with `work_mem = 32MB` so the ~100k-row working set and its sorts stay in memory.
+
+Measured locally (Supabase local stack on Docker Desktop for Windows, warm connection, 10 000 responses / 107 384 answers, 14 questions):
+
+| Call                                             | First version  | Final      |
+| ------------------------------------------------ | -------------- | ---------- |
+| `dashboard_bundle`, no filters                   | 11–30 s        | 380–410 ms |
+| `dashboard_bundle`, 30 days + device             | 8.9 s          | 180–200 ms |
+| `dashboard_bundle`, answer filter                | 34 s           | 0.7–0.8 s  |
+| `cross_suggestions`                              | 91 s           | 0.9–1.0 s  |
+| `cross_stats` (one pair)                         | —              | 80–150 ms  |
+| `question_stats` (one question)                  | —              | 37–55 ms   |
+| `list_responses` (page of 50 / with search)      | 48 ms / 106 ms | same       |
+| 300 responses (demo default): `dashboard_bundle` | 82 ms          | < 60 ms    |
+
+EXPLAIN ANALYZE notes:
+
+- First version: `Nested Loop → Bitmap Heap Scan on response_answers (loops=10000)` per question: the `unnest(id array)` join was estimated at 10 rows, so the planner probed `response_answers_response_id_idx` 10 000 times per question, and PL/pgSQL's generic plan after five calls made it worse.
+- Final version, unfiltered: one `Seq Scan on response_answers` (≈20 ms for 107k rows) into the materialized answer set; the largest remaining nodes are the hash aggregate over all answers (≈80 ms with timing overhead), the options unnest + aggregate (≈55 ms), the numeric quantiles (`Sort` of 48k numeric answers, ≈35 ms), pairs and terms (≈30 ms each). Cost is linear in the number of answers.
+- Without enough `work_mem` the materialized answer set and the ordered-set aggregate spilled to disk (≈100 ms extra); per-function `work_mem = 32MB` fixed it.
+- Bulk demo inserts leave stale planner statistics; `seed:demo` calls `analyze_response_tables()`.
+
+Index review: existing indexes cover the access paths (`responses (form_id, submitted_at)`, `response_answers (form_id, question_key)`, `response_answers (response_id)`, `gin (value_options)`, partial identifier indexes from Phase 3). No new indexes were needed: unfiltered statistics read the whole form's answers, where a sequential scan of the matching rows is the cheapest plan. If Phase 5 scale tests miss the target, the next step is pre-aggregated per-question counters maintained by triggers.
+
+### Client data flow
+
+- TanStack Query keys: `["dashboard-bundle", formId, rpcFilters]` (initial data from the server render), `["cross-stats", …]`, `["cross-suggestions", …]` (5 min stale, re-ranked when the total grows ~10%), `["text-answers", …]`, `["responses", …]`.
+- Realtime: one channel per open dashboard, joined with the user's JWT (`realtime.setAuth`), INSERT filtered by `form_id`, DELETE unfiltered. Inserts bump the cached total immediately and schedule an invalidation (1.5 s trailing, 5 s max wait). Channel errors switch the bundle query to 10 s polling.
+- Dashboard config: `dashboards.config` (zod `dashboardConfigSchema`, `configVersion: 1`), merged with the current definition on every load (`mergeDashboardConfig`), saved 800 ms after the last change through `saveDashboardAction` (RLS: `can_edit_form`).
+
 ## Form definition and versions
 
 - `src/lib/forms/schema.ts` holds the only Zod schema of a form definition (builder, renderer, server validation, analytics).
@@ -214,19 +274,24 @@ Typed answer columns: text types → `value_text`; number / rating / linear_scal
 
 ## Code map
 
-| Concern                                          | Location                                       |
-| ------------------------------------------------ | ---------------------------------------------- |
-| Session refresh, auth redirect, locale routing   | `src/proxy.ts`                                 |
-| Current user, `requireUser`, `requireRole`       | `src/lib/auth/session.ts`                      |
-| Role helpers and navigation                      | `src/lib/auth/roles.ts`                        |
-| Supabase clients                                 | `src/lib/supabase/{client,server,admin}.ts`    |
-| i18n config                                      | `src/lib/i18n/`, `messages/`                   |
-| 403 page                                         | `src/app/[locale]/(app)/forbidden.tsx`         |
-| Admin users                                      | `src/app/[locale]/(app)/admin/users/`          |
-| Schema                                           | `supabase/migrations/`                         |
-| Form definition schema, logic, answer validation | `src/lib/forms/{schema,logic,validation}.ts`   |
-| Builder operations, templates, hashing           | `src/lib/forms/{operations,templates,hash}.ts` |
-| Form server actions, access helper               | `src/lib/forms/{actions,access}.ts`            |
-| Builder UI                                       | `src/components/builder/`                      |
-| Form renderer (preview now, live in Phase 3)     | `src/components/renderer/`                     |
-| Forms list, settings, sharing, public link       | `src/components/forms/`                        |
+| Concern                                          | Location                                                            |
+| ------------------------------------------------ | ------------------------------------------------------------------- |
+| Session refresh, auth redirect, locale routing   | `src/proxy.ts`                                                      |
+| Current user, `requireUser`, `requireRole`       | `src/lib/auth/session.ts`                                           |
+| Role helpers and navigation                      | `src/lib/auth/roles.ts`                                             |
+| Supabase clients                                 | `src/lib/supabase/{client,server,admin}.ts`                         |
+| i18n config                                      | `src/lib/i18n/`, `messages/`                                        |
+| 403 page                                         | `src/app/[locale]/(app)/forbidden.tsx`                              |
+| Admin users                                      | `src/app/[locale]/(app)/admin/users/`                               |
+| Schema                                           | `supabase/migrations/`                                              |
+| Form definition schema, logic, answer validation | `src/lib/forms/{schema,logic,validation}.ts`                        |
+| Builder operations, templates, hashing           | `src/lib/forms/{operations,templates,hash}.ts`                      |
+| Form server actions, access helper               | `src/lib/forms/{actions,access}.ts`                                 |
+| Builder UI                                       | `src/components/builder/`                                           |
+| Form renderer (preview now, live in Phase 3)     | `src/components/renderer/`                                          |
+| Forms list, settings, sharing, public link       | `src/components/forms/`                                             |
+| Dashboard RPCs, demo generator                   | `supabase/migrations/*phase4*`, `*dashboard*`, `*bundle_questions*` |
+| Auto dashboard, config, merge, filters, insights | `src/lib/analytics/`                                                |
+| Dashboard UI, charts, live updates               | `src/components/dashboard/`, `src/components/charts/`               |
+| Responses tab                                    | `src/components/responses/`                                         |
+| Demo data script                                 | `scripts/seed-demo.ts`                                              |

@@ -124,3 +124,80 @@
     @apply bg-background text-foreground;
   }
 }
+
+/*
+ * Chart tokens (dataviz reference palette, validated with the six-checks
+ * validator against the app's card surfaces: white and #171717).
+ * Categorical slots are used in this fixed order, never cycled. Light slots
+ * 3–5 are below 3:1 contrast, so every chart ships value labels and a table view.
+ */
+:root {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+  --seq-100: #cde2fb;
+  --seq-200: #9ec5f4;
+  --seq-250: #86b6ef;
+  --seq-300: #6da7ec;
+  --seq-400: #3987e5;
+  --seq-500: #256abf;
+  --seq-600: #184f95;
+  --seq-700: #0d366b;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-muted: #898781;
+  --status-good: #0ca30c;
+  --status-good-text: #006300;
+  --status-critical: #d03b3b;
+}
+
+.dark {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --seq-100: #104281;
+  --seq-200: #184f95;
+  --seq-250: #1c5cab;
+  --seq-300: #256abf;
+  --seq-400: #2a78d6;
+  --seq-500: #3987e5;
+  --seq-600: #6da7ec;
+  --seq-700: #9ec5f4;
+  --chart-grid: #2c2c2a;
+  --chart-axis: #383835;
+  --chart-muted: #898781;
+  --status-good-text: #0ca30c;
+}
+
+/* react-grid-layout */
+.react-grid-item.react-grid-placeholder {
+  background: var(--primary);
+  opacity: 0.08;
+  border-radius: var(--radius);
+}
+.react-grid-item > .react-resizable-handle {
+  z-index: 10;
+}
+
+/* Brief highlight when a widget's numbers change (live updates). */
+@keyframes fp-flash {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--series-1) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+.fp-flash {
+  animation: fp-flash 1.2s ease-out;
+}

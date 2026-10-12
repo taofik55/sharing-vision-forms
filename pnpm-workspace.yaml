@@ -5,3 +5,8 @@
   "@swc/core": false
   esbuild: true
   supabase: true
+minimumReleaseAgeExclude:
+  - "@tanstack/query-core@5.104.2"
+  - "@tanstack/react-query@5.104.2"
+  - "@tanstack/react-virtual@3.14.17"
+  - "@tanstack/virtual-core@3.19.2"

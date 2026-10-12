@@ -241,3 +241,75 @@ Status: **done** (2026-10-12)
 - [ ] Turn off the network (devtools offline) and submit: the error with "Try again" appears and answers stay; reconnect and retry succeeds once.
 - [ ] Switch the language on the public page: buttons and messages change, questions stay as written.
 - [ ] Republish the form while a respondent has an older draft: on resume they see the "form was updated" notice.
+
+## Phase 4: dynamic dashboard, live updates, customization, filters, responses
+
+Status: **done** (2026-10-13)
+
+### Plan
+
+(The plan was not written into this file at the start of the phase, as the working agreement asks; it is recorded here together with the outcome.)
+
+1. Demo data: SQL generator `generate_demo_responses(form_id, n, days)` + `pnpm seed:demo`.
+2. Data layer in Postgres: filtered response set, per-question statistics, overview, cross statistics, suggestions, one-call bundle, responses listing; all access-checked.
+3. Pure TypeScript: auto-dashboard rules, config schema, merge strategy, filters (URL), insight templates, stats helpers.
+4. UI: widget cards with context, charts (Recharts), grid (react-grid-layout), live updates (Realtime + TanStack Query), edit mode, filters, responses tab, presentation mode.
+5. Tests: unit, RPC integration with hand-computed values, Playwright two-context live test.
+
+### Assumptions
+
+- All times are shown in Asia/Jakarta (WIB). "Today", "last 7 days" and the date presets are WIB calendar days.
+- Completion funnel: drafts are deleted on submit, so `started = submitted + open drafts` (abandoned starts) in the date range. Drafts only exist once a respondent changed something (first server sync), so the rate is an upper bound.
+- Answer filters use "any of" semantics (OR inside one filter, AND between filters); numeric answers match by their exact value.
+- Cross-question suggestions use questions of the current version only.
+
+### What is done
+
+- **Demo data**: `pnpm seed:demo [--n N --days D]` creates "Customer Satisfaction Survey (Demo)" (template + waiting-time and age questions), publishes it, shares it with the dummy viewer and calls `generate_demo_responses` (set-based, `is_demo = true`, abandoned drafts for the funnel). Correlations: a latent satisfaction score drives ratings / NPS / most choices; the first number question (waiting time) falls as satisfaction rises (r ≈ −0.9 with NPS); the second (age) rises with the acquisition channel. Conditional questions are only answered when visible. 300 responses take 0.3 s, 10 000 take 8 s.
+- **RPCs** (all `SECURITY DEFINER` with an explicit access check, see Decisions): `dashboard_bundle`, `dashboard_overview`, `question_stats`, `cross_stats`, `cross_suggestions`, `question_text_answers` (keyset), `list_responses` (keyset, search, sort, masking), `get_response`. Every statistic carries `n` and `low_sample` (n < 30).
+- **Overview**: total, today, last 7 vs previous 7 WIB days, previous period of the same length (compare toggle), timeline with automatic hour/day/week buckets, weekday × hour heatmap, mean/median duration, device and language split, completion funnel, counts per version, first/last response.
+- **Question stats**: choice counts + Other; checkboxes counts, % of respondents, average selections, top 5 pairs; rating/scale distribution, mean, median, stddev, NPS (0–10), CSAT (max 5); number min/max/mean/median/p25/p75/p90/stddev + Sturges histogram; date series (auto granularity) + weekday distribution; text n, average length, top 15 terms (en + id stop words, min 3 chars).
+- **Cross stats**: contingency table + χ² + Cramér's V; group means for categorical × numeric; Pearson r for numeric × numeric only with n ≥ 30.
+- **Auto dashboard** (`src/lib/analytics/auto.ts`): default chart per type with allowed alternatives, overview block, possible-relationships block (max 4, Cramér's V ≥ 0.2, standardized mean difference ≥ 0.5, |r| ≥ 0.3, n ≥ 30, labeled "Possible relationship, not proof of causation"), 12-column layout grouped under section headings.
+- **Widget context**: title, type + "n of N answered (rate)", chart / data-table toggle, key insight from i18n templates with real numbers, "How to read this chart" popover, badges (low sample, required/optional, "Only shown when …", "Only in versions …", "Question removed (historical data)"), PNG download (html-to-image). Header with editable title/description and an "About this data" panel (description, versions, period, total, creator, demo note).
+- **Live updates**: Realtime `postgres_changes` INSERT (filtered by form) and DELETE; instant counter bump in the query cache, "last response X ago" ticker, debounced refetch (1.5 s trailing, 5 s max wait), Live / Reconnecting / Paused badge, pause with "N new responses, apply" pill, 10 s polling fallback while the channel is down, highlight of widgets whose numbers changed, quiet refetch for responses outside the date range. Measured locally: counter 0.3–1.8 s, charts 2.4–4.5 s after submit.
+- **Customization** (editors only): edit mode with drag (grip) and resize, widget menu (hide/show, rename, context note, chart type, palette, size, remove user widgets), add widget (question chart, cross-tab, text/heading, KPI: count / average / NPS), reset to auto (confirm), debounced persistence to `dashboards.config` (`configVersion: 1`) with Saving/Saved/Error. Viewers get no edit controls but can filter.
+- **Merge on publish** (`src/lib/analytics/merge.ts`): widgets keyed by question key; never-seen questions get auto widgets under a "New questions" heading at the bottom; removed questions keep their widgets; user changes are never overwritten.
+- **Filters** (URL state): date presets (all, today, 7d, 30d) and custom range, version, answer filters (multiple), device, language, compare toggle, chips, clear all; drill-down by clicking bars, slices and legend rows.
+- **Responses tab**: keyset-paginated, virtualized table (infinite scroll), text search, sort (newest, oldest, duration), column visibility, same filter bar, drawer with the full response, delete for owner/admin (confirm). Identifiers are full for editors and masked for viewers (`a***@example.com`, `***789`).
+- **Presentation mode**: full screen, larger type, periodic refresh, light/dark via the theme toggle.
+- **Tests**: 321 Vitest tests (new unit: auto mapping for every type, insights in en and id, NPS / median / quantiles / trend, filter serialization and Jakarta windows, merge strategy; new integration: every RPC against a 6-response fixture with hand-computed values, filters, previous period, keyset pagination, masking, access denied for an unshared viewer, column privileges, demo generator restricted to the secret key) and 14 Playwright tests (new: live update across two browser contexts, responses tab with delete, customization surviving reload, viewer without edit controls, republish adding a "New questions" widget).
+
+### Decisions
+
+1. **SECURITY DEFINER + explicit check** for analytics RPCs. With `SECURITY INVOKER`, RLS would evaluate `can_view_form()` for every answer row (≈100k at 10k responses). One check at the top (`_assert_can_view`) is faster and auditable. Signed-in callers need `can_view_form`; the secret key (no `auth.uid()`) is allowed so the Phase 5 public dashboard can reuse the same functions after validating a share token. `anon` has no EXECUTE.
+2. **Identifier columns are no longer selectable by `authenticated`** (column privileges). Editors get identifiers through `list_responses` / `get_response`; viewers get them masked. Realtime respects the column grants (payloads omit identifiers).
+3. **Set-based statistics.** The first implementation computed stats question by question over an id array and took 11–30 s per bundle at 10k responses (nested loops, worse with PL/pgSQL generic plans). The final version reads the filtered answers once per call, computes counts / averages / quantiles in one aggregate pass and the rest in a few typed passes, with `work_mem = 32MB` for the call (see architecture.md for numbers). Top terms use at most 2,000 answers per question (deterministic sample, reported as `terms_based_on`).
+4. **Applied migrations were never edited.** Each fix is its own migration: `20261015090100` (no temp tables), `20261016090000` (calendar-day KPIs, timeline end), `20261016100000` / `110000` / `120000` (performance), `20261016100100` (numeric cast).
+5. **Recharts animations are production-only.** Recharts 3.10 never starts its entry animation under React StrictMode double mounting (dev only), leaving marks invisible. Charts animate in production builds (verified) and render without animation in development.
+6. **Realtime joins with the user's JWT**: the browser client loads the cookie session and calls `realtime.setAuth()` before subscribing; otherwise the channel joins as anon and RLS drops every event.
+7. Chart colors use the dataviz reference palette (validated with the six-checks script against white and `#171717` cards): categorical slots in fixed order, a blue sequential ramp for scores and the heatmap, status colors only for trend arrows with an icon. Three light slots are below 3:1 contrast, so every chart has value labels and a data-table view.
+8. Widget sizes are fixed grid units; content taller than its box is clipped until an editor resizes it. On screens below 768 px widgets stack in one column.
+
+### Known gaps
+
+- `dashboard_bundle` takes ~390–410 ms locally (Docker Desktop on Windows) at 10k responses / 107k answers without filters, 0.2–0.8 s with filters (answer filters are the slowest). The p95 < 400 ms target is to be verified on production-like hardware in Phase 5; next step if needed is pre-aggregated per-question tables maintained by a trigger.
+- `cross_suggestions` takes ~0.9 s at 10k responses; it is cached for 5 minutes and re-ranked only when the dataset grows by ~10%.
+- Responses that are deleted trigger a refetch for every open dashboard (DELETE events cannot be filtered by form).
+- Drill-down works on choice, rating/scale and split widgets; histogram bars (ranges) and dates are not filterable yet.
+- Presentation mode relies on the browser Fullscreen API; without it the dashboard still switches to the large layout.
+- The Playwright suite uses 2 workers locally: more parallel browsers overload the on-demand dev server.
+
+### Manual verification checklist
+
+- [ ] `pnpm seed:demo`, then sign in as editor@formpulse.test and open the demo form's Dashboard: KPI cards, timeline, heatmap, devices, languages, possible relationships, then one widget per question (not for the email/phone questions), each with an insight sentence and badges.
+- [ ] Check numbers against SQL in Studio, e.g. `select round(avg(value_number),2) from response_answers where question_key = '<rating key>'` equals the rating widget's average.
+- [ ] Open the public form in another window and submit: the total updates within ~2 s, the charts within ~5 s, the changed widgets flash; "Last response … ago" resets.
+- [ ] Pause live updates, submit again: "1 new response, apply" appears; applying refreshes.
+- [ ] Filters: 7 days, a version, "Filter by answer", device, language; chips appear and the URL changes; copy the URL into another tab and get the same view. Click a donut slice / bar to add a filter.
+- [ ] Edit dashboard: drag and resize widgets, rename one, hide one, add a note, switch a chart type, add a cross-tab and a KPI card. Reload: everything stays. Reset to auto restores the default.
+- [ ] Sign in as viewer@formpulse.test (shared on the demo form): dashboard without Edit, responses with masked identifiers, no delete button.
+- [ ] Add a question in the builder and publish: the dashboard shows it under "New questions" and customized widgets are unchanged.
+- [ ] Responses tab: search "queue", sort by duration, hide columns, open a row, delete it as the owner.
+- [ ] Present mode: full screen, larger type, live updates keep working; toggle dark mode.
+- [ ] Download a widget as PNG.

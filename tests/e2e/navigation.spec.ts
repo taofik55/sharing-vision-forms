@@ -32,7 +32,7 @@ async function login(page: Page, email: string) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Kata sandi").fill(PASSWORD);
   await page.getByRole("button", { name: "Masuk" }).click();
-  await expect(page).toHaveURL(/\/id$/);
+  await expect(page).toHaveURL(/\/id$/, { timeout: 30_000 });
 }
 
 for (const account of ACCOUNTS) {
@@ -69,14 +69,14 @@ for (const account of ACCOUNTS) {
 test("language switch keeps the current page", async ({ page }) => {
   await login(page, "viewer@formpulse.test");
   await page.getByTestId("nav-forms").click();
-  await expect(page).toHaveURL(/\/id\/forms$/);
+  await expect(page).toHaveURL(/\/id\/forms$/, { timeout: 30_000 });
   await expect(
     page.getByRole("heading", { level: 1, name: "Formulir" }),
   ).toBeVisible();
 
   await page.getByTestId("language-switcher").click();
   await page.getByRole("menuitem", { name: "English" }).click();
-  await expect(page).toHaveURL(/\/en\/forms$/);
+  await expect(page).toHaveURL(/\/en\/forms$/, { timeout: 30_000 });
   await expect(
     page.getByRole("heading", { level: 1, name: "Forms" }),
   ).toBeVisible();

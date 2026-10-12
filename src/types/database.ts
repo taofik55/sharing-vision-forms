@@ -502,6 +502,56 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      _assert_can_view: { Args: { p_form_id: string }; Returns: undefined };
+      _bundle_questions: {
+        Args: { p_filters: Json; p_form_id: string; p_only_key?: string };
+        Returns: Json;
+      };
+      _can_see_identifiers: { Args: { p_form_id: string }; Returns: boolean };
+      _cross_stats_f: {
+        Args: { p_filters: Json; p_form_id: string; p_qa: Json; p_qb: Json };
+        Returns: Json;
+      };
+      _dashboard_overview: {
+        Args: { p_filters: Json; p_form_id: string };
+        Returns: Json;
+      };
+      _dashboard_responses: {
+        Args: { p_filters: Json; p_form_id: string; p_ignore_dates?: boolean };
+        Returns: {
+          device: string;
+          duration_seconds: number;
+          form_version_id: string;
+          id: string;
+          locale: string;
+          submitted_at: string;
+        }[];
+      };
+      _demo_latent: {
+        Args: { p_id: string };
+        Returns: {
+          response_id: string;
+          s: number;
+          seg: number;
+        }[];
+      };
+      _demo_normal: { Args: Record<PropertyKey, never>; Returns: number };
+      _form_question_index: {
+        Args: { p_form_id: string };
+        Returns: {
+          in_current: boolean;
+          key: string;
+          meta: Json;
+          ord: number;
+          version_ids: string[];
+          version_numbers: number[];
+        }[];
+      };
+      _question_meta: {
+        Args: { p_form_id: string; p_key: string };
+        Returns: Json;
+      };
+      _stop_words: { Args: Record<PropertyKey, never>; Returns: string[] };
       add_form_member: {
         Args: {
           p_email: string;
@@ -516,11 +566,28 @@ export type Database = {
           user_id: string;
         }[];
       };
+      analyze_response_tables: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
+      };
       can_edit_form: { Args: { p_form_id: string }; Returns: boolean };
       can_view_form: { Args: { p_form_id: string }; Returns: boolean };
       check_rate_limit: {
         Args: { p_bucket: string; p_limit: number; p_window_seconds: number };
         Returns: boolean;
+      };
+      cross_stats: {
+        Args: {
+          p_filters?: Json;
+          p_form_id: string;
+          p_question_a: string;
+          p_question_b: string;
+        };
+        Returns: Json;
+      };
+      cross_suggestions: {
+        Args: { p_filters?: Json; p_form_id: string };
+        Returns: Json;
       };
       current_app_role: {
         Args: Record<PropertyKey, never>;
@@ -530,10 +597,24 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: string;
       };
+      dashboard_bundle: {
+        Args: { p_filters?: Json; p_form_id: string };
+        Returns: Json;
+      };
+      dashboard_overview: {
+        Args: { p_filters?: Json; p_form_id: string };
+        Returns: Json;
+      };
+      delete_demo_responses: { Args: { p_form_id: string }; Returns: number };
       delete_response_draft: {
         Args: { p_draft_token: string; p_form_id: string };
         Returns: undefined;
       };
+      generate_demo_responses: {
+        Args: { p_days?: number; p_form_id: string; p_n: number };
+        Returns: number;
+      };
+      get_response: { Args: { p_response_id: string }; Returns: Json };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_form_owner: { Args: { p_form_id: string }; Returns: boolean };
       is_slug_available: {
@@ -585,12 +666,44 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      list_responses: {
+        Args: {
+          p_cursor?: Json;
+          p_filters?: Json;
+          p_form_id: string;
+          p_limit?: number;
+          p_search?: string;
+          p_sort?: string;
+        };
+        Returns: Json;
+      };
+      mask_email: { Args: { p_email: string }; Returns: string };
+      mask_phone: { Args: { p_phone: string }; Returns: string };
       publish_form: {
         Args: { p_expected_updated_at?: string; p_form_id: string };
         Returns: {
           updated_at: string;
           version_id: string;
           version_number: number;
+        }[];
+      };
+      question_stats: {
+        Args: { p_filters?: Json; p_form_id: string; p_question_key: string };
+        Returns: Json;
+      };
+      question_text_answers: {
+        Args: {
+          p_before_at?: string;
+          p_before_id?: string;
+          p_filters?: Json;
+          p_form_id: string;
+          p_limit?: number;
+          p_question_key: string;
+        };
+        Returns: {
+          response_id: string;
+          submitted_at: string;
+          value: string;
         }[];
       };
       save_response_draft: {
