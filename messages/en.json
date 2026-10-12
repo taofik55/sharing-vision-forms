@@ -1,0 +1,620 @@
+{
+  "metadata": {
+    "title": "FormPulse",
+    "description": "Dynamic forms with live dashboards"
+  },
+  "common": {
+    "appName": "FormPulse",
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "backHome": "Back to home",
+    "comingSoon": "Coming in a later phase",
+    "unexpectedError": "Something went wrong. Please try again."
+  },
+  "nav": {
+    "label": "Main navigation",
+    "home": "Home",
+    "forms": "Forms",
+    "adminSection": "Administration",
+    "users": "Users",
+    "demoTools": "Demo tools",
+    "openMenu": "Open menu"
+  },
+  "header": {
+    "userMenu": "Account menu",
+    "signOut": "Sign out",
+    "signedInAs": "Signed in as"
+  },
+  "theme": {
+    "toggle": "Change theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "label": "Language",
+    "id": "Bahasa Indonesia",
+    "en": "English"
+  },
+  "roles": {
+    "admin": "Admin",
+    "editor": "Editor",
+    "viewer": "Viewer"
+  },
+  "auth": {
+    "loginTitle": "Sign in to FormPulse",
+    "loginDescription": "Use the account provided by your administrator.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "signedOut": "You have been signed out.",
+    "errors": {
+      "invalidInput": "Enter a valid email and your password.",
+      "invalidCredentials": "Incorrect email or password.",
+      "inactive": "Your account is inactive. Contact an administrator.",
+      "rateLimited": "Too many attempts. Wait a moment and try again.",
+      "emailNotConfirmed": "Your email address has not been confirmed yet.",
+      "generic": "We could not sign you in. Please try again."
+    }
+  },
+  "home": {
+    "title": "Welcome, {name}",
+    "subtitle": "Here is an overview of your forms.",
+    "recentForms": "Recent forms",
+    "emptyTitle": "No forms yet",
+    "emptyEditor": "Create your first form to start collecting responses.",
+    "emptyViewer": "Forms shared with you will appear here.",
+    "createForm": "Create form"
+  },
+  "forms": {
+    "title": "Forms",
+    "subtitle": "All forms you can access.",
+    "emptyTitle": "No forms yet",
+    "emptyEditor": "Create your first form to start collecting responses.",
+    "emptyViewer": "Forms shared with you will appear here.",
+    "createForm": "Create form",
+    "newForm": "New form",
+    "searchPlaceholder": "Search forms…",
+    "searchLabel": "Search by title",
+    "statusFilter": "Status",
+    "scopeFilter": "Access",
+    "ownerFilter": "Owner",
+    "sortLabel": "Sort by",
+    "anyStatus": "Active (not archived)",
+    "anyOwner": "Any owner",
+    "scope": {
+      "all": "All forms",
+      "mine": "Owned by me",
+      "shared": "Shared with me"
+    },
+    "sort": {
+      "updated_desc": "Recently updated",
+      "updated_asc": "Least recently updated",
+      "created_desc": "Newest",
+      "title_asc": "Title A–Z",
+      "title_desc": "Title Z–A",
+      "responses_desc": "Most responses",
+      "last_response_desc": "Latest response"
+    },
+    "view": {
+      "label": "View",
+      "table": "Table",
+      "cards": "Cards"
+    },
+    "columns": {
+      "title": "Title",
+      "status": "Status",
+      "responses": "Responses",
+      "lastResponse": "Last response",
+      "updated": "Updated",
+      "owner": "Owner",
+      "actions": "Actions"
+    },
+    "never": "Never",
+    "responsesCount": "{count, plural, =0 {No responses} one {# response} other {# responses}}",
+    "noResults": "No forms match these filters.",
+    "clearFilters": "Clear filters",
+    "unpublishedChanges": "Unpublished changes",
+    "version": "v{number}",
+    "access": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "editor": "Editor",
+      "viewer": "Viewer"
+    },
+    "actions": {
+      "menu": "Actions for {title}",
+      "openBuilder": "Open builder",
+      "dashboard": "Dashboard",
+      "settings": "Settings",
+      "duplicate": "Duplicate",
+      "archive": "Archive",
+      "restore": "Restore",
+      "delete": "Delete"
+    },
+    "deleteTitle": "Delete “{title}”?",
+    "deleteDescription": "This permanently deletes the form, all its versions and {count, plural, =0 {its responses} one {# response} other {# responses}}. This cannot be undone.",
+    "confirmDelete": "Delete form",
+    "copyTitle": "{title} (copy)",
+    "toast": {
+      "duplicated": "Form duplicated.",
+      "archived": "Form archived.",
+      "restored": "Form restored.",
+      "deleted": "Form deleted.",
+      "closed": "Form closed. It no longer accepts responses.",
+      "reopened": "Form reopened."
+    },
+    "pagination": {
+      "label": "Pagination",
+      "previous": "Previous",
+      "next": "Next",
+      "summary": "{from}–{to} of {total}"
+    },
+    "newFormDialog": {
+      "title": "Create a form",
+      "description": "Start from a blank form or a template. You can change everything later.",
+      "create": "Create",
+      "creating": "Creating…",
+      "questions": "{count, plural, one {# question} other {# questions}}"
+    },
+    "templates": {
+      "blank": {
+        "name": "Blank form",
+        "description": "Start from scratch."
+      },
+      "customer_satisfaction": {
+        "name": "Customer Satisfaction Survey",
+        "description": "Ratings, NPS and follow-up questions."
+      },
+      "event_registration": {
+        "name": "Event Registration",
+        "description": "Attendee details, tickets and sessions."
+      },
+      "employee_feedback": {
+        "name": "Employee Feedback",
+        "description": "Anonymous satisfaction and suggestions."
+      }
+    }
+  },
+  "errors": {
+    "forbiddenTitle": "Access denied",
+    "forbiddenDescription": "You do not have permission to view this page.",
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "The page you are looking for does not exist."
+  },
+  "adminUsers": {
+    "title": "Users",
+    "subtitle": "Manage who can access FormPulse and what they can do.",
+    "createUser": "Create user",
+    "createTitle": "Create user",
+    "createDescription": "The user can sign in immediately with this password.",
+    "fullName": "Full name",
+    "email": "Email",
+    "role": "Role",
+    "password": "Initial password",
+    "status": "Status",
+    "createdAt": "Created",
+    "actions": "Actions",
+    "active": "Active",
+    "inactive": "Inactive",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "you": "You",
+    "empty": "No users found.",
+    "create": "Create",
+    "creating": "Creating…",
+    "changeRole": "Change role for {name}",
+    "toast": {
+      "created": "User created.",
+      "roleUpdated": "Role updated.",
+      "activated": "User activated.",
+      "deactivated": "User deactivated."
+    },
+    "errors": {
+      "invalidInput": "Check the highlighted fields.",
+      "emailTaken": "A user with this email already exists.",
+      "cannotChangeSelf": "You cannot demote or deactivate yourself.",
+      "notAllowed": "Only administrators can do this.",
+      "notFound": "User not found.",
+      "generic": "The change could not be saved."
+    },
+    "validation": {
+      "email": "Enter a valid email address.",
+      "fullName": "Name must be 1–200 characters.",
+      "password": "Password must be at least 8 characters.",
+      "role": "Choose a role."
+    }
+  },
+  "demo": {
+    "title": "Demo tools",
+    "subtitle": "Generate demo data to test dashboards at scale.",
+    "disabled": "Demo tools are disabled. Set ENABLE_DEMO_TOOLS=true to enable them."
+  },
+  "publicForm": {
+    "title": "Form",
+    "notFoundTitle": "Form not found",
+    "notFoundDescription": "This link is not valid, or the form is no longer available.",
+    "closedTitle": "This form is closed",
+    "closedDefault": "This form is no longer accepting responses.",
+    "closesSoon": "This form closes {time}.",
+    "savedOnDevice": "Your answers are saved on this device as you go.",
+    "resume": {
+      "title": "Continue where you left off?",
+      "description": "You have unfinished answers for this form saved on this device.",
+      "continue": "Continue",
+      "startOver": "Start over",
+      "versionChanged": "This form was updated since you started. {count, plural, =0 {Please review your answers.} one {# answer no longer fits and must be filled in again.} other {# answers no longer fit and must be filled in again.}}"
+    },
+    "identifier": {
+      "title": "Before you start",
+      "description": {
+        "email": "Enter your email address.",
+        "phone": "Enter your phone number.",
+        "email_or_phone": "Enter your email address or phone number (at least one)."
+      },
+      "email": "Email",
+      "phone": "Phone number",
+      "phoneHint": "For example 0812 3456 7890",
+      "privacy": "We ask for this only to make sure each person responds once. It is not shown to other respondents and it is not verified.",
+      "continue": "Continue",
+      "respondingAs": "Responding as {value}",
+      "change": "Change",
+      "errors": {
+        "emailRequired": "Enter your email address.",
+        "phoneRequired": "Enter your phone number.",
+        "identifierRequired": "Enter an email address or a phone number.",
+        "invalidEmail": "Enter a valid email address.",
+        "invalidPhone": "Enter a valid phone number (8–15 digits)."
+      }
+    },
+    "progress": "Progress",
+    "honeypot": "Leave this field empty",
+    "submitting": "Sending…",
+    "networkError": "We could not send your response. Your answers are saved on this device. Check your connection and try again.",
+    "retry": "Try again",
+    "thankYouTitle": "Thank you!",
+    "submitAnother": "Submit another response",
+    "submitErrors": {
+      "BAD_REQUEST": "Something is wrong with this request. Reload the page and try again.",
+      "PAYLOAD_TOO_LARGE": "Your answers are too long to send. Shorten them and try again.",
+      "RATE_LIMITED": "Too many attempts from your network. Wait a few minutes and try again.",
+      "TOO_FAST": "That was very fast. Please check your answers and submit again in a moment.",
+      "NOT_FOUND": "This form is no longer available.",
+      "FORM_CLOSED": "This form has closed and no longer accepts responses.",
+      "INVALID_VERSION": "This form has changed. Reload the page to continue.",
+      "IDENTIFIER_INVALID": "Check your email address or phone number.",
+      "VALIDATION_ERROR": "Some answers need your attention.",
+      "ALREADY_SUBMITTED": "A response with this email address or phone number was already submitted. Thank you!",
+      "SERVER_ERROR": "Something went wrong on our side. Your answers are saved; please try again."
+    }
+  },
+  "publicDashboard": {
+    "title": "Dashboard",
+    "placeholder": "Shared dashboards will be available in a later phase."
+  },
+  "formStatus": {
+    "draft": "Draft",
+    "published": "Published",
+    "closed": "Closed",
+    "archived": "Archived"
+  },
+  "formErrors": {
+    "notAllowed": "You do not have permission to do this.",
+    "notFound": "This form no longer exists.",
+    "invalidInput": "Check the highlighted fields.",
+    "conflict": "Someone else changed this form. Reload to see the latest version.",
+    "invalidDefinition": "The form has problems that must be fixed first.",
+    "invalidTransition": "That status change is not possible right now.",
+    "slugTaken": "This link is already used by another form.",
+    "userNotFound": "No active user with this email exists.",
+    "ownerCannotBeMember": "The owner already has full access.",
+    "generic": "Something went wrong. Please try again."
+  },
+  "formNav": {
+    "label": "Form sections",
+    "builder": "Builder",
+    "settings": "Settings",
+    "dashboard": "Dashboard",
+    "responses": "Responses",
+    "backToForms": "All forms"
+  },
+  "questionTypes": {
+    "short_text": "Short answer",
+    "paragraph": "Paragraph",
+    "multiple_choice": "Multiple choice",
+    "checkboxes": "Checkboxes",
+    "dropdown": "Dropdown",
+    "number": "Number",
+    "date": "Date",
+    "rating": "Rating",
+    "linear_scale": "Linear scale",
+    "email": "Email",
+    "phone": "Phone"
+  },
+  "operators": {
+    "equals": "is",
+    "not_equals": "is not",
+    "contains": "contains",
+    "gt": "is greater than",
+    "lt": "is less than",
+    "gtDate": "is after",
+    "ltDate": "is before",
+    "is_answered": "is answered",
+    "is_empty": "is empty"
+  },
+  "problems": {
+    "invalidStructure": "The form data is damaged. Reload the builder.",
+    "noQuestions": "Add at least one question.",
+    "emptySectionTitle": "A section needs a title.",
+    "emptyQuestionTitle": "A question needs a title.",
+    "duplicateId": "Two items share the same id.",
+    "duplicateKey": "Two questions share the same key.",
+    "tooFewOptions": "Choice questions need at least 2 options.",
+    "emptyOptionLabel": "An option has no label.",
+    "duplicateOptionId": "Two options share the same id.",
+    "invalidPattern": "The pattern is not a valid regular expression.",
+    "invalidLengthRange": "Minimum length is greater than maximum length.",
+    "invalidNumberRange": "Minimum is greater than maximum.",
+    "invalidDateRange": "The date range is invalid.",
+    "invalidSelectionRange": "Minimum selections is greater than maximum.",
+    "missingScale": "Set the scale range.",
+    "missingRating": "Set the number of stars.",
+    "conditionEmpty": "The logic rule has no conditions.",
+    "conditionUnknownQuestion": "A condition refers to a deleted question.",
+    "conditionForwardReference": "A condition refers to a question that comes later. Move it earlier.",
+    "conditionInvalidOperator": "A condition uses an operator that does not fit the question type.",
+    "conditionMissingValue": "A condition is missing its value.",
+    "conditionInvalidValue": "A condition has a value that no longer exists."
+  },
+  "builder": {
+    "palette": "Add question",
+    "paletteHint": "Click to add, or drag into a section.",
+    "addSection": "Add section",
+    "untitledQuestion": "Untitled question",
+    "sectionTitle": "Section {number}",
+    "option": "Option {number}",
+    "other": "Other",
+    "emptySection": "Drag questions here or use the palette.",
+    "dragHandle": "Drag to reorder “{title}”",
+    "selectQuestion": "Edit question “{title}”",
+    "requiredMark": "Required",
+    "hasLogic": "Has logic",
+    "save": {
+      "saving": "Saving…",
+      "saved": "All changes saved",
+      "unsaved": "Unsaved changes",
+      "error": "Could not save",
+      "retry": "Retry"
+    },
+    "conflict": {
+      "title": "A newer draft exists",
+      "description": "Another editor saved this form after you opened it. Load their version (your unsaved edits are discarded) or overwrite it with yours.",
+      "loadLatest": "Load latest",
+      "overwrite": "Overwrite with mine"
+    },
+    "restoredLocal": "Restored edits that had not been saved yet.",
+    "undo": "Undo",
+    "redo": "Redo",
+    "preview": "Preview",
+    "publish": "Publish",
+    "publishing": "Publishing…",
+    "publishedToast": "Published version {number}.",
+    "publishFirstFix": "Fix the problems listed before publishing.",
+    "publicLink": "Public link",
+    "problems": {
+      "title": "Problems",
+      "none": "No problems. Ready to publish.",
+      "count": "{count, plural, one {# problem} other {# problems}}",
+      "jump": "Go to item",
+      "formLevel": "Form"
+    },
+    "responsesBanner": {
+      "title": "This form already has {count, plural, one {# response} other {# responses}}",
+      "body": "Existing responses stay linked to the version they answered. Publishing creates a new version. Questions you keep (same key) continue their analytics; deleting a question here never deletes its old answers."
+    },
+    "readOnly": "You can view this form but not edit it.",
+    "section": {
+      "label": "Section {number} of {total}",
+      "titlePlaceholder": "Section title",
+      "descriptionPlaceholder": "Description (optional)",
+      "moveUp": "Move section up",
+      "moveDown": "Move section down",
+      "delete": "Delete section",
+      "deleteTitle": "Delete this section?",
+      "deleteDescription": "{count, plural, one {Its # question is} other {Its # questions are}} deleted too.",
+      "edit": "Edit section"
+    },
+    "question": {
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "deleteTitle": "Delete this question?",
+      "deleteDescription": "It is removed from the draft. Answers to published versions are kept.",
+      "dependents": "{count, plural, one {# question uses} other {# questions use}} it in a logic rule. Those rules will show as problems.",
+      "moreActions": "More actions"
+    },
+    "inspector": {
+      "title": "Inspector",
+      "empty": "Select a question or section to edit it.",
+      "questionTitle": "Question",
+      "descriptionLabel": "Description",
+      "required": "Required",
+      "type": "Question type",
+      "moveToSection": "Section",
+      "changeTypeTitle": "Change question type?",
+      "changeTypeDescription": "The options of this question will be removed.",
+      "changeTypeConfirm": "Change type",
+      "options": "Options",
+      "optionLabel": "Option {number} label",
+      "addOption": "Add option",
+      "removeOption": "Remove option",
+      "moveOption": "Drag to reorder option {number}",
+      "pasteOptions": "Paste options",
+      "pasteHint": "One option per line. Duplicates and blank lines are skipped.",
+      "addPasted": "Add options",
+      "allowOther": "Add “Other” option",
+      "validation": "Validation",
+      "minLength": "Min length",
+      "maxLength": "Max length",
+      "pattern": "Pattern (regular expression)",
+      "patternHint": "The whole answer must match, e.g. [A-Z]+-[0-9]+",
+      "min": "Minimum",
+      "max": "Maximum",
+      "minSelections": "Min selections",
+      "maxSelections": "Max selections",
+      "integerOnly": "Whole numbers only",
+      "minDate": "Earliest date",
+      "maxDate": "Latest date",
+      "scale": "Scale",
+      "scaleFrom": "From",
+      "scaleTo": "To",
+      "minLabel": "Label for lowest",
+      "maxLabel": "Label for highest",
+      "ratingMax": "Number of stars",
+      "key": "Key",
+      "keyHint": "Stable id used by answers and analytics. Never changes."
+    },
+    "logic": {
+      "title": "Logic",
+      "enable": "Show this question only if…",
+      "combinator": "Match",
+      "and": "all conditions (AND)",
+      "or": "any condition (OR)",
+      "question": "Question",
+      "operator": "Operator",
+      "value": "Value",
+      "chooseQuestion": "Choose a question",
+      "chooseValue": "Choose a value",
+      "addCondition": "Add condition",
+      "removeCondition": "Remove condition",
+      "noEarlierQuestions": "Logic can only use questions placed before this one."
+    },
+    "previewDialog": {
+      "title": "Preview",
+      "desktop": "Desktop",
+      "mobile": "Mobile",
+      "notice": "Preview only. Answers are not saved."
+    }
+  },
+  "renderer": {
+    "next": "Next",
+    "back": "Back",
+    "submit": "Submit",
+    "required": "Required",
+    "requiredLegend": "* Required",
+    "page": "Page {current} of {total}",
+    "chooseOption": "Choose",
+    "otherPlaceholder": "Your answer",
+    "textPlaceholder": "Your answer",
+    "rating": "{value} of {max} stars",
+    "clearSelection": "Clear selection",
+    "thankYouDefault": "Your response has been recorded.",
+    "previewSubmitted": "Preview finished. In the live form, the response would now be submitted.",
+    "startOver": "Start over",
+    "errors": {
+      "required": "This question is required.",
+      "invalid": "Enter a valid answer.",
+      "tooShort": "The answer is too short.",
+      "tooLong": "The answer is too long.",
+      "patternMismatch": "The answer does not match the required format.",
+      "invalidEmail": "Enter a valid email address.",
+      "invalidPhone": "Enter a valid phone number.",
+      "notInteger": "Enter a whole number.",
+      "tooSmall": "The value is too small.",
+      "tooLarge": "The value is too large.",
+      "invalidDate": "Enter a valid date.",
+      "dateTooEarly": "The date is too early.",
+      "dateTooLate": "The date is too late.",
+      "invalidOption": "Choose one of the options.",
+      "otherRequired": "Describe your “Other” answer.",
+      "tooFewSelections": "Select more options.",
+      "tooManySelections": "Select fewer options."
+    }
+  },
+  "formSettings": {
+    "title": "Settings",
+    "details": "Details",
+    "detailsDescription": "How the form is named and reached.",
+    "formTitle": "Title",
+    "description": "Description",
+    "slug": "Link",
+    "slugHint": "Lowercase letters, numbers and dashes.",
+    "slugFromTitle": "Generate from title",
+    "slugAvailable": "This link is available.",
+    "slugTaken": "This link is already taken.",
+    "identifierMode": "Respondent identifier",
+    "identifierHint": "Ask for an email or phone to allow one response per person.",
+    "identifier": {
+      "none": "None (anonymous)",
+      "email": "Email",
+      "phone": "Phone",
+      "email_or_phone": "Email or phone"
+    },
+    "deadline": "Deadline",
+    "deadlineHint": "Asia/Jakarta time (WIB). Leave empty for no deadline.",
+    "closedMessage": "Message when closed",
+    "thankYouMessage": "Thank-you message",
+    "save": "Save settings",
+    "saving": "Saving…",
+    "saved": "Settings saved.",
+    "validation": {
+      "title": "Title must be 1–300 characters.",
+      "description": "Description is too long.",
+      "slug": "Use 3–80 lowercase letters, numbers and single dashes.",
+      "deadline": "Enter a valid date and time.",
+      "message": "Message is too long."
+    },
+    "sharing": "Sharing",
+    "sharingDescription": "People in your workspace who can access this form.",
+    "sharingReadOnly": "Only the owner or an admin can change sharing.",
+    "ownerLabel": "Owner",
+    "addPerson": "Add person",
+    "emailPlaceholder": "name@company.com",
+    "add": "Add",
+    "noMembers": "Not shared with anyone yet.",
+    "remove": "Remove",
+    "removeLabel": "Remove {name}",
+    "memberRole": {
+      "viewer": "Can view",
+      "editor": "Can edit"
+    },
+    "memberRoleLabel": "Access for {name}",
+    "viewerAppRoleNote": "Read-only account: cannot edit even with edit access.",
+    "memberAdded": "Access granted.",
+    "memberUpdated": "Access updated.",
+    "memberRemoved": "Access removed.",
+    "publishing": "Publishing",
+    "publishingDescription": "Control whether the form accepts responses.",
+    "currentVersion": "Live version: v{number}",
+    "neverPublished": "Not published yet. Publish it from the builder.",
+    "close": "Close form",
+    "reopen": "Reopen form",
+    "dangerZone": "Danger zone",
+    "archiveDescription": "Hide the form from the list. Responses are kept.",
+    "archive": "Archive",
+    "restore": "Restore",
+    "deleteDescription": "Permanently delete the form and all responses.",
+    "delete": "Delete form"
+  },
+  "publicLink": {
+    "title": "Public link",
+    "description": "Anyone with this link can respond.",
+    "copy": "Copy link",
+    "copied": "Link copied.",
+    "open": "Open",
+    "qrAlt": "QR code for the public form link",
+    "downloadQr": "Download QR",
+    "notPublished": "Publish the form to get a public link.",
+    "closedNotice": "The form is closed and does not accept responses."
+  },
+  "formDashboard": {
+    "title": "Dashboard",
+    "placeholder": "Live charts for this form arrive in a later phase."
+  },
+  "formResponses": {
+    "title": "Responses",
+    "placeholder": "The responses table arrives in a later phase."
+  }
+}

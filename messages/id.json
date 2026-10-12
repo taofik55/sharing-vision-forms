@@ -1,0 +1,620 @@
+{
+  "metadata": {
+    "title": "FormPulse",
+    "description": "Formulir dinamis dengan dasbor langsung"
+  },
+  "common": {
+    "appName": "FormPulse",
+    "loading": "Memuat…",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "close": "Tutup",
+    "backHome": "Kembali ke beranda",
+    "comingSoon": "Hadir di fase berikutnya",
+    "unexpectedError": "Terjadi kesalahan. Silakan coba lagi."
+  },
+  "nav": {
+    "label": "Navigasi utama",
+    "home": "Beranda",
+    "forms": "Formulir",
+    "adminSection": "Administrasi",
+    "users": "Pengguna",
+    "demoTools": "Alat demo",
+    "openMenu": "Buka menu"
+  },
+  "header": {
+    "userMenu": "Menu akun",
+    "signOut": "Keluar",
+    "signedInAs": "Masuk sebagai"
+  },
+  "theme": {
+    "toggle": "Ganti tema",
+    "light": "Terang",
+    "dark": "Gelap",
+    "system": "Sistem"
+  },
+  "language": {
+    "label": "Bahasa",
+    "id": "Bahasa Indonesia",
+    "en": "English"
+  },
+  "roles": {
+    "admin": "Admin",
+    "editor": "Editor",
+    "viewer": "Peninjau"
+  },
+  "auth": {
+    "loginTitle": "Masuk ke FormPulse",
+    "loginDescription": "Gunakan akun yang diberikan oleh administrator Anda.",
+    "email": "Email",
+    "password": "Kata sandi",
+    "submit": "Masuk",
+    "submitting": "Sedang masuk…",
+    "signedOut": "Anda telah keluar.",
+    "errors": {
+      "invalidInput": "Masukkan email yang valid dan kata sandi Anda.",
+      "invalidCredentials": "Email atau kata sandi salah.",
+      "inactive": "Akun Anda tidak aktif. Hubungi administrator.",
+      "rateLimited": "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.",
+      "emailNotConfirmed": "Alamat email Anda belum dikonfirmasi.",
+      "generic": "Kami tidak dapat memproses masuk Anda. Silakan coba lagi."
+    }
+  },
+  "home": {
+    "title": "Selamat datang, {name}",
+    "subtitle": "Ringkasan formulir Anda.",
+    "recentForms": "Formulir terbaru",
+    "emptyTitle": "Belum ada formulir",
+    "emptyEditor": "Buat formulir pertama Anda untuk mulai mengumpulkan jawaban.",
+    "emptyViewer": "Formulir yang dibagikan kepada Anda akan muncul di sini.",
+    "createForm": "Buat formulir"
+  },
+  "forms": {
+    "title": "Formulir",
+    "subtitle": "Semua formulir yang dapat Anda akses.",
+    "emptyTitle": "Belum ada formulir",
+    "emptyEditor": "Buat formulir pertama Anda untuk mulai mengumpulkan jawaban.",
+    "emptyViewer": "Formulir yang dibagikan kepada Anda akan muncul di sini.",
+    "createForm": "Buat formulir",
+    "newForm": "Formulir baru",
+    "searchPlaceholder": "Cari formulir…",
+    "searchLabel": "Cari berdasarkan judul",
+    "statusFilter": "Status",
+    "scopeFilter": "Akses",
+    "ownerFilter": "Pemilik",
+    "sortLabel": "Urutkan",
+    "anyStatus": "Aktif (tidak diarsipkan)",
+    "anyOwner": "Semua pemilik",
+    "scope": {
+      "all": "Semua formulir",
+      "mine": "Milik saya",
+      "shared": "Dibagikan ke saya"
+    },
+    "sort": {
+      "updated_desc": "Terakhir diperbarui",
+      "updated_asc": "Paling lama diperbarui",
+      "created_desc": "Terbaru",
+      "title_asc": "Judul A–Z",
+      "title_desc": "Judul Z–A",
+      "responses_desc": "Jawaban terbanyak",
+      "last_response_desc": "Jawaban terakhir"
+    },
+    "view": {
+      "label": "Tampilan",
+      "table": "Tabel",
+      "cards": "Kartu"
+    },
+    "columns": {
+      "title": "Judul",
+      "status": "Status",
+      "responses": "Jawaban",
+      "lastResponse": "Jawaban terakhir",
+      "updated": "Diperbarui",
+      "owner": "Pemilik",
+      "actions": "Aksi"
+    },
+    "never": "Belum ada",
+    "responsesCount": "{count, plural, =0 {Belum ada jawaban} other {# jawaban}}",
+    "noResults": "Tidak ada formulir yang cocok dengan filter ini.",
+    "clearFilters": "Hapus filter",
+    "unpublishedChanges": "Perubahan belum diterbitkan",
+    "version": "v{number}",
+    "access": {
+      "owner": "Pemilik",
+      "admin": "Admin",
+      "editor": "Editor",
+      "viewer": "Peninjau"
+    },
+    "actions": {
+      "menu": "Aksi untuk {title}",
+      "openBuilder": "Buka penyusun",
+      "dashboard": "Dasbor",
+      "settings": "Pengaturan",
+      "duplicate": "Duplikat",
+      "archive": "Arsipkan",
+      "restore": "Pulihkan",
+      "delete": "Hapus"
+    },
+    "deleteTitle": "Hapus “{title}”?",
+    "deleteDescription": "Formulir, semua versinya, dan {count, plural, =0 {jawabannya} other {# jawaban}} akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.",
+    "confirmDelete": "Hapus formulir",
+    "copyTitle": "{title} (salinan)",
+    "toast": {
+      "duplicated": "Formulir diduplikasi.",
+      "archived": "Formulir diarsipkan.",
+      "restored": "Formulir dipulihkan.",
+      "deleted": "Formulir dihapus.",
+      "closed": "Formulir ditutup dan tidak menerima jawaban lagi.",
+      "reopened": "Formulir dibuka kembali."
+    },
+    "pagination": {
+      "label": "Halaman",
+      "previous": "Sebelumnya",
+      "next": "Berikutnya",
+      "summary": "{from}–{to} dari {total}"
+    },
+    "newFormDialog": {
+      "title": "Buat formulir",
+      "description": "Mulai dari formulir kosong atau templat. Semuanya bisa diubah nanti.",
+      "create": "Buat",
+      "creating": "Membuat…",
+      "questions": "{count} pertanyaan"
+    },
+    "templates": {
+      "blank": {
+        "name": "Formulir kosong",
+        "description": "Mulai dari awal."
+      },
+      "customer_satisfaction": {
+        "name": "Survei Kepuasan Pelanggan",
+        "description": "Penilaian, NPS, dan pertanyaan lanjutan."
+      },
+      "event_registration": {
+        "name": "Pendaftaran Acara",
+        "description": "Data peserta, tiket, dan sesi."
+      },
+      "employee_feedback": {
+        "name": "Umpan Balik Karyawan",
+        "description": "Kepuasan dan saran secara anonim."
+      }
+    }
+  },
+  "errors": {
+    "forbiddenTitle": "Akses ditolak",
+    "forbiddenDescription": "Anda tidak memiliki izin untuk melihat halaman ini.",
+    "notFoundTitle": "Halaman tidak ditemukan",
+    "notFoundDescription": "Halaman yang Anda cari tidak ada."
+  },
+  "adminUsers": {
+    "title": "Pengguna",
+    "subtitle": "Atur siapa yang dapat mengakses FormPulse dan apa yang dapat mereka lakukan.",
+    "createUser": "Buat pengguna",
+    "createTitle": "Buat pengguna",
+    "createDescription": "Pengguna dapat langsung masuk dengan kata sandi ini.",
+    "fullName": "Nama lengkap",
+    "email": "Email",
+    "role": "Peran",
+    "password": "Kata sandi awal",
+    "status": "Status",
+    "createdAt": "Dibuat",
+    "actions": "Aksi",
+    "active": "Aktif",
+    "inactive": "Nonaktif",
+    "activate": "Aktifkan",
+    "deactivate": "Nonaktifkan",
+    "you": "Anda",
+    "empty": "Tidak ada pengguna.",
+    "create": "Buat",
+    "creating": "Membuat…",
+    "changeRole": "Ubah peran untuk {name}",
+    "toast": {
+      "created": "Pengguna dibuat.",
+      "roleUpdated": "Peran diperbarui.",
+      "activated": "Pengguna diaktifkan.",
+      "deactivated": "Pengguna dinonaktifkan."
+    },
+    "errors": {
+      "invalidInput": "Periksa kolom yang ditandai.",
+      "emailTaken": "Pengguna dengan email ini sudah ada.",
+      "cannotChangeSelf": "Anda tidak dapat menurunkan peran atau menonaktifkan diri sendiri.",
+      "notAllowed": "Hanya administrator yang dapat melakukan ini.",
+      "notFound": "Pengguna tidak ditemukan.",
+      "generic": "Perubahan tidak dapat disimpan."
+    },
+    "validation": {
+      "email": "Masukkan alamat email yang valid.",
+      "fullName": "Nama harus 1–200 karakter.",
+      "password": "Kata sandi minimal 8 karakter.",
+      "role": "Pilih peran."
+    }
+  },
+  "demo": {
+    "title": "Alat demo",
+    "subtitle": "Buat data demo untuk menguji dasbor dalam skala besar.",
+    "disabled": "Alat demo dinonaktifkan. Setel ENABLE_DEMO_TOOLS=true untuk mengaktifkannya."
+  },
+  "publicForm": {
+    "title": "Formulir",
+    "notFoundTitle": "Formulir tidak ditemukan",
+    "notFoundDescription": "Tautan ini tidak valid, atau formulir sudah tidak tersedia.",
+    "closedTitle": "Formulir ini sudah ditutup",
+    "closedDefault": "Formulir ini tidak lagi menerima jawaban.",
+    "closesSoon": "Formulir ini ditutup {time}.",
+    "savedOnDevice": "Jawaban Anda tersimpan otomatis di perangkat ini.",
+    "resume": {
+      "title": "Lanjutkan pengisian?",
+      "description": "Ada jawaban yang belum selesai untuk formulir ini di perangkat ini.",
+      "continue": "Lanjutkan",
+      "startOver": "Mulai dari awal",
+      "versionChanged": "Formulir ini diperbarui sejak Anda mulai mengisi. {count, plural, =0 {Silakan periksa kembali jawaban Anda.} other {# jawaban tidak lagi sesuai dan perlu diisi ulang.}}"
+    },
+    "identifier": {
+      "title": "Sebelum mulai",
+      "description": {
+        "email": "Masukkan alamat email Anda.",
+        "phone": "Masukkan nomor telepon Anda.",
+        "email_or_phone": "Masukkan alamat email atau nomor telepon Anda (minimal salah satu)."
+      },
+      "email": "Email",
+      "phone": "Nomor telepon",
+      "phoneHint": "Contoh 0812 3456 7890",
+      "privacy": "Kami memintanya hanya untuk memastikan setiap orang menjawab satu kali. Data ini tidak ditampilkan ke responden lain dan tidak diverifikasi.",
+      "continue": "Lanjut",
+      "respondingAs": "Menjawab sebagai {value}",
+      "change": "Ubah",
+      "errors": {
+        "emailRequired": "Masukkan alamat email Anda.",
+        "phoneRequired": "Masukkan nomor telepon Anda.",
+        "identifierRequired": "Masukkan alamat email atau nomor telepon.",
+        "invalidEmail": "Masukkan alamat email yang valid.",
+        "invalidPhone": "Masukkan nomor telepon yang valid (8–15 digit)."
+      }
+    },
+    "progress": "Kemajuan",
+    "honeypot": "Biarkan kolom ini kosong",
+    "submitting": "Mengirim…",
+    "networkError": "Jawaban Anda belum terkirim. Jawaban tetap tersimpan di perangkat ini. Periksa koneksi Anda lalu coba lagi.",
+    "retry": "Coba lagi",
+    "thankYouTitle": "Terima kasih!",
+    "submitAnother": "Kirim jawaban lain",
+    "submitErrors": {
+      "BAD_REQUEST": "Ada yang salah dengan permintaan ini. Muat ulang halaman lalu coba lagi.",
+      "PAYLOAD_TOO_LARGE": "Jawaban Anda terlalu panjang untuk dikirim. Persingkat lalu coba lagi.",
+      "RATE_LIMITED": "Terlalu banyak percobaan dari jaringan Anda. Tunggu beberapa menit lalu coba lagi.",
+      "TOO_FAST": "Pengisian terlalu cepat. Periksa jawaban Anda lalu kirim lagi sebentar lagi.",
+      "NOT_FOUND": "Formulir ini sudah tidak tersedia.",
+      "FORM_CLOSED": "Formulir ini sudah ditutup dan tidak menerima jawaban lagi.",
+      "INVALID_VERSION": "Formulir ini telah berubah. Muat ulang halaman untuk melanjutkan.",
+      "IDENTIFIER_INVALID": "Periksa alamat email atau nomor telepon Anda.",
+      "VALIDATION_ERROR": "Beberapa jawaban perlu diperbaiki.",
+      "ALREADY_SUBMITTED": "Jawaban dengan alamat email atau nomor telepon ini sudah pernah dikirim. Terima kasih!",
+      "SERVER_ERROR": "Terjadi kesalahan di sisi kami. Jawaban Anda tetap tersimpan; silakan coba lagi."
+    }
+  },
+  "publicDashboard": {
+    "title": "Dasbor",
+    "placeholder": "Dasbor yang dibagikan akan tersedia di fase berikutnya."
+  },
+  "formStatus": {
+    "draft": "Draf",
+    "published": "Terbit",
+    "closed": "Ditutup",
+    "archived": "Diarsipkan"
+  },
+  "formErrors": {
+    "notAllowed": "Anda tidak memiliki izin untuk melakukan ini.",
+    "notFound": "Formulir ini sudah tidak ada.",
+    "invalidInput": "Periksa kolom yang ditandai.",
+    "conflict": "Orang lain mengubah formulir ini. Muat ulang untuk melihat versi terbaru.",
+    "invalidDefinition": "Formulir memiliki masalah yang harus diperbaiki terlebih dahulu.",
+    "invalidTransition": "Perubahan status tersebut tidak dapat dilakukan sekarang.",
+    "slugTaken": "Tautan ini sudah dipakai formulir lain.",
+    "userNotFound": "Tidak ada pengguna aktif dengan email ini.",
+    "ownerCannotBeMember": "Pemilik sudah memiliki akses penuh.",
+    "generic": "Terjadi kesalahan. Silakan coba lagi."
+  },
+  "formNav": {
+    "label": "Bagian formulir",
+    "builder": "Penyusun",
+    "settings": "Pengaturan",
+    "dashboard": "Dasbor",
+    "responses": "Jawaban",
+    "backToForms": "Semua formulir"
+  },
+  "questionTypes": {
+    "short_text": "Jawaban singkat",
+    "paragraph": "Paragraf",
+    "multiple_choice": "Pilihan ganda",
+    "checkboxes": "Kotak centang",
+    "dropdown": "Daftar pilihan",
+    "number": "Angka",
+    "date": "Tanggal",
+    "rating": "Penilaian bintang",
+    "linear_scale": "Skala linear",
+    "email": "Email",
+    "phone": "Telepon"
+  },
+  "operators": {
+    "equals": "adalah",
+    "not_equals": "bukan",
+    "contains": "mengandung",
+    "gt": "lebih besar dari",
+    "lt": "lebih kecil dari",
+    "gtDate": "setelah",
+    "ltDate": "sebelum",
+    "is_answered": "dijawab",
+    "is_empty": "kosong"
+  },
+  "problems": {
+    "invalidStructure": "Data formulir rusak. Muat ulang penyusun.",
+    "noQuestions": "Tambahkan minimal satu pertanyaan.",
+    "emptySectionTitle": "Bagian harus memiliki judul.",
+    "emptyQuestionTitle": "Pertanyaan harus memiliki judul.",
+    "duplicateId": "Dua item memiliki id yang sama.",
+    "duplicateKey": "Dua pertanyaan memiliki kunci yang sama.",
+    "tooFewOptions": "Pertanyaan pilihan membutuhkan minimal 2 opsi.",
+    "emptyOptionLabel": "Ada opsi tanpa label.",
+    "duplicateOptionId": "Dua opsi memiliki id yang sama.",
+    "invalidPattern": "Pola bukan ekspresi reguler yang valid.",
+    "invalidLengthRange": "Panjang minimum lebih besar dari maksimum.",
+    "invalidNumberRange": "Nilai minimum lebih besar dari maksimum.",
+    "invalidDateRange": "Rentang tanggal tidak valid.",
+    "invalidSelectionRange": "Jumlah pilihan minimum lebih besar dari maksimum.",
+    "missingScale": "Atur rentang skala.",
+    "missingRating": "Atur jumlah bintang.",
+    "conditionEmpty": "Aturan logika belum memiliki kondisi.",
+    "conditionUnknownQuestion": "Kondisi merujuk ke pertanyaan yang sudah dihapus.",
+    "conditionForwardReference": "Kondisi merujuk ke pertanyaan yang ada setelahnya. Pindahkan ke atas.",
+    "conditionInvalidOperator": "Kondisi memakai operator yang tidak sesuai jenis pertanyaan.",
+    "conditionMissingValue": "Kondisi belum memiliki nilai.",
+    "conditionInvalidValue": "Kondisi memakai nilai yang sudah tidak ada."
+  },
+  "builder": {
+    "palette": "Tambah pertanyaan",
+    "paletteHint": "Klik untuk menambah, atau seret ke dalam bagian.",
+    "addSection": "Tambah bagian",
+    "untitledQuestion": "Pertanyaan tanpa judul",
+    "sectionTitle": "Bagian {number}",
+    "option": "Opsi {number}",
+    "other": "Lainnya",
+    "emptySection": "Seret pertanyaan ke sini atau gunakan palet.",
+    "dragHandle": "Seret untuk mengurutkan “{title}”",
+    "selectQuestion": "Ubah pertanyaan “{title}”",
+    "requiredMark": "Wajib",
+    "hasLogic": "Ada logika",
+    "save": {
+      "saving": "Menyimpan…",
+      "saved": "Semua perubahan tersimpan",
+      "unsaved": "Ada perubahan belum tersimpan",
+      "error": "Gagal menyimpan",
+      "retry": "Coba lagi"
+    },
+    "conflict": {
+      "title": "Ada draf yang lebih baru",
+      "description": "Editor lain menyimpan formulir ini setelah Anda membukanya. Muat versi mereka (perubahan Anda yang belum tersimpan dibuang) atau timpa dengan milik Anda.",
+      "loadLatest": "Muat yang terbaru",
+      "overwrite": "Timpa dengan milik saya"
+    },
+    "restoredLocal": "Perubahan yang belum tersimpan berhasil dipulihkan.",
+    "undo": "Urungkan",
+    "redo": "Ulangi",
+    "preview": "Pratinjau",
+    "publish": "Terbitkan",
+    "publishing": "Menerbitkan…",
+    "publishedToast": "Versi {number} diterbitkan.",
+    "publishFirstFix": "Perbaiki masalah yang tercantum sebelum menerbitkan.",
+    "publicLink": "Tautan publik",
+    "problems": {
+      "title": "Masalah",
+      "none": "Tidak ada masalah. Siap diterbitkan.",
+      "count": "{count} masalah",
+      "jump": "Buka item",
+      "formLevel": "Formulir"
+    },
+    "responsesBanner": {
+      "title": "Formulir ini sudah memiliki {count} jawaban",
+      "body": "Jawaban yang ada tetap terhubung ke versi yang mereka jawab. Menerbitkan akan membuat versi baru. Pertanyaan yang dipertahankan (kunci sama) melanjutkan analitiknya; menghapus pertanyaan di sini tidak menghapus jawaban lamanya."
+    },
+    "readOnly": "Anda dapat melihat formulir ini tetapi tidak dapat mengubahnya.",
+    "section": {
+      "label": "Bagian {number} dari {total}",
+      "titlePlaceholder": "Judul bagian",
+      "descriptionPlaceholder": "Deskripsi (opsional)",
+      "moveUp": "Pindahkan bagian ke atas",
+      "moveDown": "Pindahkan bagian ke bawah",
+      "delete": "Hapus bagian",
+      "deleteTitle": "Hapus bagian ini?",
+      "deleteDescription": "{count} pertanyaan di dalamnya juga akan dihapus.",
+      "edit": "Ubah bagian"
+    },
+    "question": {
+      "duplicate": "Duplikat",
+      "delete": "Hapus",
+      "deleteTitle": "Hapus pertanyaan ini?",
+      "deleteDescription": "Pertanyaan dihapus dari draf. Jawaban pada versi yang sudah terbit tetap disimpan.",
+      "dependents": "{count} pertanyaan memakainya dalam aturan logika. Aturan tersebut akan muncul sebagai masalah.",
+      "moreActions": "Aksi lainnya"
+    },
+    "inspector": {
+      "title": "Inspektor",
+      "empty": "Pilih pertanyaan atau bagian untuk mengubahnya.",
+      "questionTitle": "Pertanyaan",
+      "descriptionLabel": "Deskripsi",
+      "required": "Wajib diisi",
+      "type": "Jenis pertanyaan",
+      "moveToSection": "Bagian",
+      "changeTypeTitle": "Ubah jenis pertanyaan?",
+      "changeTypeDescription": "Opsi pada pertanyaan ini akan dihapus.",
+      "changeTypeConfirm": "Ubah jenis",
+      "options": "Opsi",
+      "optionLabel": "Label opsi {number}",
+      "addOption": "Tambah opsi",
+      "removeOption": "Hapus opsi",
+      "moveOption": "Seret untuk mengurutkan opsi {number}",
+      "pasteOptions": "Tempel opsi",
+      "pasteHint": "Satu opsi per baris. Duplikat dan baris kosong dilewati.",
+      "addPasted": "Tambahkan opsi",
+      "allowOther": "Tambah opsi “Lainnya”",
+      "validation": "Validasi",
+      "minLength": "Panjang minimum",
+      "maxLength": "Panjang maksimum",
+      "pattern": "Pola (ekspresi reguler)",
+      "patternHint": "Seluruh jawaban harus cocok, mis. [A-Z]+-[0-9]+",
+      "min": "Minimum",
+      "max": "Maksimum",
+      "minSelections": "Pilihan minimum",
+      "maxSelections": "Pilihan maksimum",
+      "integerOnly": "Hanya bilangan bulat",
+      "minDate": "Tanggal paling awal",
+      "maxDate": "Tanggal paling akhir",
+      "scale": "Skala",
+      "scaleFrom": "Dari",
+      "scaleTo": "Sampai",
+      "minLabel": "Label terendah",
+      "maxLabel": "Label tertinggi",
+      "ratingMax": "Jumlah bintang",
+      "key": "Kunci",
+      "keyHint": "Id tetap yang dipakai jawaban dan analitik. Tidak pernah berubah."
+    },
+    "logic": {
+      "title": "Logika",
+      "enable": "Tampilkan pertanyaan ini hanya jika…",
+      "combinator": "Cocokkan",
+      "and": "semua kondisi (DAN)",
+      "or": "salah satu kondisi (ATAU)",
+      "question": "Pertanyaan",
+      "operator": "Operator",
+      "value": "Nilai",
+      "chooseQuestion": "Pilih pertanyaan",
+      "chooseValue": "Pilih nilai",
+      "addCondition": "Tambah kondisi",
+      "removeCondition": "Hapus kondisi",
+      "noEarlierQuestions": "Logika hanya dapat memakai pertanyaan yang berada sebelum pertanyaan ini."
+    },
+    "previewDialog": {
+      "title": "Pratinjau",
+      "desktop": "Desktop",
+      "mobile": "Ponsel",
+      "notice": "Hanya pratinjau. Jawaban tidak disimpan."
+    }
+  },
+  "renderer": {
+    "next": "Berikutnya",
+    "back": "Kembali",
+    "submit": "Kirim",
+    "required": "Wajib",
+    "requiredLegend": "* Wajib diisi",
+    "page": "Halaman {current} dari {total}",
+    "chooseOption": "Pilih",
+    "otherPlaceholder": "Jawaban Anda",
+    "textPlaceholder": "Jawaban Anda",
+    "rating": "{value} dari {max} bintang",
+    "clearSelection": "Hapus pilihan",
+    "thankYouDefault": "Jawaban Anda telah tercatat.",
+    "previewSubmitted": "Pratinjau selesai. Pada formulir sebenarnya, jawaban akan dikirim sekarang.",
+    "startOver": "Mulai lagi",
+    "errors": {
+      "required": "Pertanyaan ini wajib diisi.",
+      "invalid": "Masukkan jawaban yang valid.",
+      "tooShort": "Jawaban terlalu pendek.",
+      "tooLong": "Jawaban terlalu panjang.",
+      "patternMismatch": "Jawaban tidak sesuai format yang diminta.",
+      "invalidEmail": "Masukkan alamat email yang valid.",
+      "invalidPhone": "Masukkan nomor telepon yang valid.",
+      "notInteger": "Masukkan bilangan bulat.",
+      "tooSmall": "Nilai terlalu kecil.",
+      "tooLarge": "Nilai terlalu besar.",
+      "invalidDate": "Masukkan tanggal yang valid.",
+      "dateTooEarly": "Tanggal terlalu awal.",
+      "dateTooLate": "Tanggal terlalu akhir.",
+      "invalidOption": "Pilih salah satu opsi.",
+      "otherRequired": "Jelaskan jawaban “Lainnya” Anda.",
+      "tooFewSelections": "Pilih lebih banyak opsi.",
+      "tooManySelections": "Pilih lebih sedikit opsi."
+    }
+  },
+  "formSettings": {
+    "title": "Pengaturan",
+    "details": "Detail",
+    "detailsDescription": "Nama dan cara mengakses formulir.",
+    "formTitle": "Judul",
+    "description": "Deskripsi",
+    "slug": "Tautan",
+    "slugHint": "Huruf kecil, angka, dan tanda hubung.",
+    "slugFromTitle": "Buat dari judul",
+    "slugAvailable": "Tautan ini tersedia.",
+    "slugTaken": "Tautan ini sudah dipakai.",
+    "identifierMode": "Identitas responden",
+    "identifierHint": "Minta email atau telepon agar setiap orang hanya dapat menjawab sekali.",
+    "identifier": {
+      "none": "Tidak ada (anonim)",
+      "email": "Email",
+      "phone": "Telepon",
+      "email_or_phone": "Email atau telepon"
+    },
+    "deadline": "Batas waktu",
+    "deadlineHint": "Waktu Asia/Jakarta (WIB). Kosongkan jika tanpa batas waktu.",
+    "closedMessage": "Pesan saat ditutup",
+    "thankYouMessage": "Pesan terima kasih",
+    "save": "Simpan pengaturan",
+    "saving": "Menyimpan…",
+    "saved": "Pengaturan disimpan.",
+    "validation": {
+      "title": "Judul harus 1–300 karakter.",
+      "description": "Deskripsi terlalu panjang.",
+      "slug": "Gunakan 3–80 huruf kecil, angka, dan tanda hubung tunggal.",
+      "deadline": "Masukkan tanggal dan waktu yang valid.",
+      "message": "Pesan terlalu panjang."
+    },
+    "sharing": "Berbagi",
+    "sharingDescription": "Orang di ruang kerja Anda yang dapat mengakses formulir ini.",
+    "sharingReadOnly": "Hanya pemilik atau admin yang dapat mengubah pembagian.",
+    "ownerLabel": "Pemilik",
+    "addPerson": "Tambah orang",
+    "emailPlaceholder": "nama@perusahaan.com",
+    "add": "Tambah",
+    "noMembers": "Belum dibagikan ke siapa pun.",
+    "remove": "Hapus",
+    "removeLabel": "Hapus {name}",
+    "memberRole": {
+      "viewer": "Dapat melihat",
+      "editor": "Dapat mengubah"
+    },
+    "memberRoleLabel": "Akses untuk {name}",
+    "viewerAppRoleNote": "Akun hanya-baca: tidak dapat mengubah meski diberi akses ubah.",
+    "memberAdded": "Akses diberikan.",
+    "memberUpdated": "Akses diperbarui.",
+    "memberRemoved": "Akses dicabut.",
+    "publishing": "Penerbitan",
+    "publishingDescription": "Atur apakah formulir menerima jawaban.",
+    "currentVersion": "Versi aktif: v{number}",
+    "neverPublished": "Belum diterbitkan. Terbitkan dari penyusun.",
+    "close": "Tutup formulir",
+    "reopen": "Buka kembali formulir",
+    "dangerZone": "Zona berbahaya",
+    "archiveDescription": "Sembunyikan formulir dari daftar. Jawaban tetap disimpan.",
+    "archive": "Arsipkan",
+    "restore": "Pulihkan",
+    "deleteDescription": "Hapus formulir dan semua jawaban secara permanen.",
+    "delete": "Hapus formulir"
+  },
+  "publicLink": {
+    "title": "Tautan publik",
+    "description": "Siapa pun yang memiliki tautan ini dapat menjawab.",
+    "copy": "Salin tautan",
+    "copied": "Tautan disalin.",
+    "open": "Buka",
+    "qrAlt": "Kode QR untuk tautan formulir publik",
+    "downloadQr": "Unduh QR",
+    "notPublished": "Terbitkan formulir untuk mendapatkan tautan publik.",
+    "closedNotice": "Formulir ditutup dan tidak menerima jawaban."
+  },
+  "formDashboard": {
+    "title": "Dasbor",
+    "placeholder": "Grafik langsung untuk formulir ini hadir di fase berikutnya."
+  },
+  "formResponses": {
+    "title": "Jawaban",
+    "placeholder": "Tabel jawaban hadir di fase berikutnya."
+  }
+}
