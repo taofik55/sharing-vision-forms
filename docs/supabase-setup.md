@@ -119,6 +119,7 @@ Roles are stored in `profiles.role` (and `raw_app_meta_data.role`, which users c
 ### 2.6 Seed
 
 - **Development / staging**: `pnpm seed --allow-remote` with `.env.local` pointing at the project. Creates the default workspace and the three DUMMY accounts. `pnpm seed:demo --allow-remote` adds the demo form (optional).
+- **Development / staging without Node**: run `supabase/dummy-data.sql` in the SQL editor (or `psql -f`). It creates six DUMMY accounts (`admin@`, `editor@`, `viewer@`, `editor2@`, `viewer2@`, and a deactivated `inactive@formpulse.test`, all `Password123!`), six forms (published survey with 400 responses, a two-version form, an email-identified event form, a closed, an archived and a draft form), memberships, abandoned drafts and four dashboard share links (active, with free text, inactive, expired), then prints a summary. Re-runnable; regenerate it with `pnpm db:dummy-sql` after changing the templates.
 - **Production**: do **not** run the seed (its DUMMY accounts have a public password). The init migration already creates the default workspace (`00000000-0000-0000-0000-000000000001`). Create the first admin by hand:
   1. **Authentication > Users > Add user** with your email and a strong password, **Auto Confirm User** on.
   2. SQL editor:

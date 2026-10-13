@@ -19,7 +19,8 @@
     "db:types": "supabase gen types typescript --local --schema public > src/types/database.ts && prettier --write src/types/database.ts",
     "seed:demo": "node --env-file=.env.local --conditions=react-server --import tsx scripts/seed-demo.ts",
     "bench:dashboard": "node --env-file=.env.local --conditions=react-server --import tsx scripts/bench-dashboard.ts",
-    "check:secrets": "node --env-file-if-exists=.env.local scripts/check-client-secrets.mjs"
+    "check:secrets": "node --env-file-if-exists=.env.local scripts/check-client-secrets.mjs",
+    "db:dummy-sql": "node --import tsx scripts/generate-dummy-sql.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
