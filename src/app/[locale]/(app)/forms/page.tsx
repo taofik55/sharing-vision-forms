@@ -45,6 +45,7 @@ export default async function FormsPage({
       p_sort: query.sort,
       p_limit: FORMS_PAGE_SIZE,
       p_offset: (query.page - 1) * FORMS_PAGE_SIZE,
+      p_include_demo: query.demo,
     }),
     supabase.rpc("list_form_owners"),
   ]);
@@ -65,6 +66,7 @@ export default async function FormsPage({
     hasUnpublishedChanges: r.has_unpublished_changes,
     canEdit: r.can_edit,
     canManage: r.access === "owner" || user.role === "admin",
+    isDemo: r.is_demo,
   }));
   const total = Number(data?.[0]?.total_count ?? 0);
   const filtered = Boolean(
@@ -85,6 +87,7 @@ export default async function FormsPage({
     if (query.sort !== "updated_desc") sp.set("sort", query.sort);
     if (query.view !== "table") sp.set("view", query.view);
     if (page > 1) sp.set("page", String(page));
+    if (query.demo) sp.set("demo", "1");
     const qs = sp.toString();
     return qs ? `/forms?${qs}` : "/forms";
   };

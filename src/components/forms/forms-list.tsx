@@ -26,6 +26,7 @@ export type FormListRow = FormActionsTarget & {
   updatedLabel: string;
   versionNumber: number | null;
   hasUnpublishedChanges: boolean;
+  isDemo: boolean;
 };
 
 type FormsListProps = {
@@ -72,6 +73,9 @@ export function FormsList({ rows, view, canCreate }: FormsListProps) {
                 )}
                 {row.hasUnpublishedChanges && (
                   <Badge variant="secondary">{t("unpublishedChanges")}</Badge>
+                )}
+                {row.isDemo && (
+                  <Badge variant="outline">{t("demoBadge")}</Badge>
                 )}
               </CardContent>
               <CardFooter className="mt-auto flex flex-col items-start gap-0.5 text-xs text-muted-foreground">
@@ -137,6 +141,9 @@ export function FormsList({ rows, view, canCreate }: FormsListProps) {
                     <Badge variant="secondary" title={t("unpublishedChanges")}>
                       {t("unpublishedChanges")}
                     </Badge>
+                  )}
+                  {row.isDemo && (
+                    <Badge variant="outline">{t("demoBadge")}</Badge>
                   )}
                 </div>
               </TableCell>

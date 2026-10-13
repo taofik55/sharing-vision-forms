@@ -31,6 +31,10 @@ export type DashboardContextValue = {
   /** Increments whenever fresh data arrives (dependent queries refetch). */
   dataVersion: number;
   presenting: boolean;
+  /** Clicking chart marks adds answer / device / language filters. */
+  drillDown: boolean;
+  /** Free-text content (top terms, latest answers) may be shown. */
+  textAnswers: boolean;
 };
 
 export const DashboardContext = createContext<DashboardContextValue | null>(

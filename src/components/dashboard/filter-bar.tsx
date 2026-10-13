@@ -41,6 +41,8 @@ type FilterBarProps = {
   questions: Record<string, Question>;
   versions: { id: string; number: number }[];
   showCompare?: boolean;
+  /** Public dashboards: date range (and compare) only. */
+  dateOnly?: boolean;
   optionLabel: (questionKey: string, optionId: string) => string;
   deviceLabel: (key: string) => string;
   languageLabel: (key: string) => string;
@@ -53,6 +55,7 @@ export function FilterBar({
   questions,
   versions,
   showCompare = true,
+  dateOnly = false,
   optionLabel,
   deviceLabel,
   languageLabel,
@@ -172,7 +175,7 @@ export function FilterBar({
             />
           </div>
         )}
-        {versions.length > 1 && (
+        {!dateOnly && versions.length > 1 && (
           <Select
             value={filters.versionIds[0] ?? ALL}
             onValueChange={(v) => set({ versionIds: v === ALL ? [] : [v] })}
@@ -198,56 +201,64 @@ export function FilterBar({
             </SelectContent>
           </Select>
         )}
-        <Select
-          value={filters.device ?? ALL}
-          onValueChange={(v) => set({ device: v === ALL ? undefined : v })}
-        >
-          <SelectTrigger className="w-36" aria-label={t("device")}>
-            <SelectValue>
-              {filters.device ? deviceLabel(filters.device) : t("allDevices")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>{t("allDevices")}</SelectItem>
-            {["mobile", "desktop", "tablet"].map((d) => (
-              <SelectItem key={d} value={d}>
-                {deviceLabel(d)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={filters.locale ?? ALL}
-          onValueChange={(v) => set({ locale: v === ALL ? undefined : v })}
-        >
-          <SelectTrigger className="w-40" aria-label={t("language")}>
-            <SelectValue>
-              {filters.locale
-                ? languageLabel(filters.locale)
-                : t("allLanguages")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>{t("allLanguages")}</SelectItem>
-            {["id", "en"].map((l) => (
-              <SelectItem key={l} value={l}>
-                {languageLabel(l)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <AnswerFilterPopover
-          questions={filterable}
-          optionLabel={optionLabel}
-          onAdd={(questionKey, values) =>
-            set({
-              answers: [
-                ...filters.answers.filter((a) => a.questionKey !== questionKey),
-                { questionKey, values },
-              ],
-            })
-          }
-        />
+        {!dateOnly && (
+          <>
+            <Select
+              value={filters.device ?? ALL}
+              onValueChange={(v) => set({ device: v === ALL ? undefined : v })}
+            >
+              <SelectTrigger className="w-36" aria-label={t("device")}>
+                <SelectValue>
+                  {filters.device
+                    ? deviceLabel(filters.device)
+                    : t("allDevices")}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>{t("allDevices")}</SelectItem>
+                {["mobile", "desktop", "tablet"].map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {deviceLabel(d)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.locale ?? ALL}
+              onValueChange={(v) => set({ locale: v === ALL ? undefined : v })}
+            >
+              <SelectTrigger className="w-40" aria-label={t("language")}>
+                <SelectValue>
+                  {filters.locale
+                    ? languageLabel(filters.locale)
+                    : t("allLanguages")}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>{t("allLanguages")}</SelectItem>
+                {["id", "en"].map((l) => (
+                  <SelectItem key={l} value={l}>
+                    {languageLabel(l)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <AnswerFilterPopover
+              questions={filterable}
+              optionLabel={optionLabel}
+              onAdd={(questionKey, values) =>
+                set({
+                  answers: [
+                    ...filters.answers.filter(
+                      (a) => a.questionKey !== questionKey,
+                    ),
+                    { questionKey, values },
+                  ],
+                })
+              }
+            />
+          </>
+        )}
         {showCompare && (
           <label className="flex items-center gap-2 text-sm">
             <Switch

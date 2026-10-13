@@ -11,6 +11,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ExportMenu } from "@/components/dashboard/export-menu";
 import { FilterBar } from "@/components/dashboard/filter-bar";
 import {
   supabaseBrowser,
@@ -328,6 +329,7 @@ export function ResponsesView(props: Props) {
         >
           {t("responsesTab.count", { count: total })}
         </span>
+        <ExportMenu formId={props.formId} filters={filters} />
       </div>
       {masked && (
         <p className="text-xs text-muted-foreground">

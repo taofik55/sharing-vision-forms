@@ -98,7 +98,8 @@ export const DonutChart = memo(function DonutChart({
   return (
     <div
       className="flex h-full flex-col gap-3 sm:flex-row sm:items-center"
-      role="img"
+      // Clickable legend rows are buttons, which an img role would hide.
+      role={onSelect ? "group" : "img"}
       aria-label={ariaLabel}
     >
       <div
@@ -341,6 +342,8 @@ export const Heatmap = memo(function Heatmap({
     <div
       className="flex h-full flex-col gap-1 overflow-x-auto"
       role="img"
+      // Scrollable on small screens: keyboard users must be able to scroll it.
+      tabIndex={0}
       aria-label={ariaLabel}
     >
       <div className="grid min-w-[560px] grid-cols-[3rem_repeat(24,minmax(0,1fr))] gap-[2px]">

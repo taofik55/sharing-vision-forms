@@ -4,6 +4,7 @@ import { LayoutGrid, Search, Table2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -47,6 +48,7 @@ export function FormsToolbar({ query, owners }: FormsToolbarProps) {
     if (next.sort !== "updated_desc") params.set("sort", next.sort);
     if (next.view !== "table") params.set("view", next.view);
     if (next.page > 1) params.set("page", String(next.page));
+    if (next.demo) params.set("demo", "1");
     const qs = params.toString();
     startTransition(() => router.replace(qs ? `${pathname}?${qs}` : pathname));
   }
@@ -153,6 +155,14 @@ export function FormsToolbar({ query, owners }: FormsToolbarProps) {
           ))}
         </SelectContent>
       </Select>
+      <label className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Switch
+          checked={query.demo}
+          onCheckedChange={(demo) => push({ demo })}
+          data-testid="show-demo-forms"
+        />
+        {t("showDemo")}
+      </label>
       <ToggleGroup
         type="single"
         variant="outline"

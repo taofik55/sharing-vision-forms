@@ -10,6 +10,11 @@ export const RATE_LIMITS = {
   submitGlobal: { limit: 60, windowSeconds: 600 },
   /** Draft saves per IP (autosave runs every ~5 s). */
   draft: { limit: 240, windowSeconds: 600 },
+  /**
+   * Public dashboard API calls per IP per share token. A page load makes a
+   * few calls per widget kind, then one poll every 10 s (+ dependent queries).
+   */
+  publicDashboard: { limit: 600, windowSeconds: 600 },
 } as const;
 
 /**

@@ -40,9 +40,9 @@ import { isChoiceType, type Question } from "@/lib/forms/schema";
 import { cn } from "@/lib/utils";
 import { useDashboard, useLabels } from "./dashboard-context";
 import {
-  supabaseBrowser,
   useCrossStats,
   useCrossSuggestions,
+  useDataSource,
   useNow,
 } from "./use-dashboard-data";
 import { WidgetCard, type CardBadge } from "./widget-card";
@@ -271,7 +271,7 @@ export function OverviewHeatmap({ widget }: { widget: Widget }) {
 }
 
 export function OverviewSplit({ widget }: { widget: Widget }) {
-  const { bundle, filters, setFilters, presenting } = useDashboard();
+  const { bundle, filters, setFilters, presenting, drillDown } = useDashboard();
   const labels = useLabels();
   const { t, fmt } = labels;
   const insightText = useInsightText();
@@ -306,7 +306,7 @@ export function OverviewSplit({ widget }: { widget: Widget }) {
         ariaLabel={widget.title ?? t("widgets.devices")}
         format={(v) => fmt.number(v)}
         onSelect={
-          presenting
+          presenting || !drillDown
             ? undefined
             : (d) =>
                 setFilters(
@@ -421,6 +421,7 @@ export const QuestionWidget = memo(function QuestionWidget({
   )}`;
   const drill = (value: string) =>
     !ctx.presenting &&
+    ctx.drillDown &&
     ctx.setFilters(toggleAnswerFilter(ctx.filters, question.key, value));
 
   const body = renderQuestionBody(
@@ -430,6 +431,7 @@ export const QuestionWidget = memo(function QuestionWidget({
     widget,
     labels,
     drill,
+    ctx.textAnswers,
   );
 
   return (
@@ -455,6 +457,7 @@ function renderQuestionBody(
   widget: Widget,
   labels: Labels,
   drill: (value: string) => void,
+  textAnswers: boolean,
 ): {
   node: React.ReactNode;
   table: { columns: string[]; rows: (string | number)[][] } | null;
@@ -724,6 +727,16 @@ function renderQuestionBody(
 
     case "short_text":
     case "paragraph": {
+      if (!textAnswers) {
+        return {
+          node: (
+            <p className="text-sm text-muted-foreground">
+              {t("widgets.textHidden")}
+            </p>
+          ),
+          table: null,
+        };
+      }
       const data: Datum[] = stats.terms.slice(0, 10).map((term) => ({
         id: term.term,
         label: term.term,
@@ -808,27 +821,24 @@ function TableBody({
 /** Latest raw text answers: keyset-paginated, virtualized list. */
 function TextAnswers({ questionKey }: { questionKey: string }) {
   const { formId, rpcFilters, dataVersion } = useDashboard();
+  const source = useDataSource();
   const { t, format } = useLabels();
   const parentRef = useRef<HTMLDivElement>(null);
   const now = useNow();
   const query = useInfiniteQuery({
     queryKey: ["text-answers", formId, questionKey, rpcFilters, dataVersion],
     initialPageParam: null as { at: string; id: string } | null,
-    queryFn: async ({ pageParam }) => {
-      const { data, error } = await supabaseBrowser().rpc(
-        "question_text_answers",
-        {
-          p_form_id: formId,
-          p_question_key: questionKey,
-          p_filters: rpcFilters as never,
-          p_before_at: pageParam?.at,
-          p_before_id: pageParam?.id,
-          p_limit: 25,
-        },
-      );
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: async ({ pageParam }) =>
+      (await source.call<
+        { response_id: string; submitted_at: string; value: string }[] | null
+      >("question_text_answers", {
+        p_form_id: formId,
+        p_question_key: questionKey,
+        p_filters: rpcFilters,
+        p_before_at: pageParam?.at,
+        p_before_id: pageParam?.id,
+        p_limit: 25,
+      })) ?? [],
     getNextPageParam: (last) =>
       last.length === 25
         ? { at: last[24].submitted_at, id: last[24].response_id }
@@ -855,6 +865,9 @@ function TextAnswers({ questionKey }: { questionKey: string }) {
       <div
         ref={parentRef}
         className="min-h-0 flex-1 overflow-auto rounded-md border"
+        role="region"
+        aria-label={t("widgets.latestAnswers")}
+        tabIndex={0}
         style={{ maxHeight: 260 }}
       >
         <ul

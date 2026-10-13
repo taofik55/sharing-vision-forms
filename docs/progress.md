@@ -313,3 +313,75 @@ Status: **done** (2026-10-13)
 - [ ] Responses tab: search "queue", sort by duration, hide columns, open a row, delete it as the owner.
 - [ ] Present mode: full screen, larger type, live updates keep working; toggle dark mode.
 - [ ] Download a widget as PNG.
+
+## Phase 5: export, public dashboard link, scale demo, hardening, deployment
+
+Status: **done** (2026-10-13)
+
+### Plan (written at phase start)
+
+1. Measure the current RPCs at 1k / 10k / 50k / 100k responses first; if `dashboard_bundle` misses p95 < 400 ms at 10k or < 1 s at 100k, apply the cheapest fix (indexes, narrower queries, then a trigger-maintained summary table) and re-measure. Results go to `docs/scale-report.md`.
+2. Migration `…_phase5.sql`: `export_responses` (keyset batches, identifiers only with edit rights), demo helpers (live simulator batch, demo-form filter for `list_forms`), anything the benchmark requires.
+3. Export: `/api/forms/[id]/export?format=csv|xlsx` + the dashboard filters. CSV (UTF-8 BOM, RFC 4180) and XLSX (exceljs streaming writer, `Responses` + `Summary`) are written from keyset batches of 1000 rows straight into the HTTP stream; formula-injection guard. Unit test for 100k rows with bounded memory.
+4. Public dashboard: share dialog (create, activate/deactivate, expiry, include text answers, regenerate, revoke, list), `/[locale]/d/[token]` page and `/api/d/[token]/stats` (admin client, form fixed by the token, whitelisted RPCs, date range only, no identifiers, text answers stripped unless allowed, rate limited, `noindex`, 10 s polling). The dashboard components get a pluggable data source so the same widgets run against Supabase (app), the share API (public) and a timed API (scale page).
+5. Print stylesheet + "Print / Save as PDF" button.
+6. `/[locale]/admin/demo/scale` (admin + `ENABLE_DEMO_TOOLS=true`): ensure a demo form, generate presets in chunks with progress, clear, live simulator (browser calls a server action every second), dashboard preview with a performance panel. Demo forms hidden from the forms list unless "Show demo forms". Live UI updates batched to ≤ 4 renders per second.
+7. Hardening: loading skeletons, empty states, error boundaries, toasts; axe checks (login, builder, public form, dashboard) and 360 px; security headers; client-bundle secret scan; RLS tests for new objects; `ENABLE_DEMO_TOOLS=false` by default.
+8. One Playwright journey across roles, public link and CSV export.
+9. Docs: README (setup, env table, scripts, Vercel `sin1`, post-deploy checklist), `docs/supabase-setup.md` rewritten against the real migrations, progress + architecture.
+
+### Assumptions
+
+- "Summary" sheet = per-question counts from the same aggregation as the dashboard (`dashboard_bundle`), so export and dashboard never disagree.
+- Exports use the latest question title per key (removed questions included at the end) and the dashboard filters from the URL; dates in the CSV are ISO (UTC) plus a separate Asia/Jakarta column.
+- Public dashboards use the saved dashboard layout (hidden widgets stay hidden) and show only the date-range filter; drill-down is disabled.
+- The scale page owns one demo form (`demo-scale-test`, owned by the admin who creates it); generation runs in chunks of 500 driven by the browser so each server call stays far below the 8 s API statement timeout and progress is real.
+
+### What is done
+
+- **Scale (summaries)**: migration `20261017090000_phase5_scale_export.sql` adds `response_summary` (hourly) and `answer_summary` (daily, per value) maintained by statement-level triggers; dashboard functions read them whenever the filters allow (no filter, date ranges on day / hour boundaries, versions, device, language) and fall back to the raw tables for answer filters. Integration tests prove both paths return identical JSON and that the incremental summary equals a full rebuild after inserts and deletes. `cross_suggestions` uses the latest 5,000 responses; answer filters, `list_responses` and the demo generator were rewritten for linear cost. Results: `docs/scale-report.md` (dashboard_bundle p95 98 ms at 10k and 227 ms at 100k through the API; targets < 400 ms / < 1 s met).
+- **Export**: `GET /api/forms/[id]/export?format=csv|xlsx` with the dashboard / responses filters (Export menu on both tabs). Keyset batches of 1,000 rows streamed straight to the client; CSV with UTF-8 BOM, RFC 4180, CRLF; XLSX through the exceljs streaming writer with `Responses` and `Summary` sheets (backpressure added on top of exceljs). Columns: response id, submitted at (UTC ISO 8601 and Asia/Jakarta), version, identifiers (editors only), one column per question (latest title, short key on collisions), option labels, checkboxes joined with `; `. Formula-injection guard. Unit test streams 100k rows through both writers with bounded memory and no fetch-ahead.
+- **Public dashboard links**: Share dialog (editors / admins): create with optional "valid until" date and "include free-text answers" (off by default), list, activate / deactivate, change expiry, regenerate (new token, old URL dies), revoke. `/[locale]/d/[token]`: read-only, no login, 10 s polling, date filter only, no drill-down, `noindex`, saved layout. `/api/d/[token]/stats`: token resolved server-side, admin client scoped to that form, whitelisted calls, rate limited (600 / 10 min per IP and token), no identifiers, text content stripped unless allowed, no creator name.
+- **Print / Save as PDF**: button on every dashboard; static two-column layout at A4-landscape width, light theme, widgets never split across pages, app shell / filters / widget buttons hidden.
+- **Scale demo page** `/[locale]/admin/demo/scale` (admin + `ENABLE_DEMO_TOOLS=true`, re-checked by every action): DEMO DATA banner, "Scale test (Demo)" form (`is_demo`), presets 1k / 10k / 50k / 100k over 7 / 30 / 90 days generated in the database in browser-driven chunks with progress, elapsed time and cancel; clear (demo rows only, chunks of 20,000); live simulator 1 / 5 / 20 responses per second (one server action per second; closing the tab stops it); the real dashboard next to a Performance panel (per-RPC server time, round trip, payload, p50 / p95 of the last 20 calls, total, render time, green / amber / red against the targets). Demo forms hidden from the forms list unless "Show demo forms".
+- **Live batching**: Realtime inserts are applied at most every 250 ms (≤ 4 counter renders per second); charts refetch after 1.5 s quiet, at most every 5 s.
+- **Hardening**: route loading skeletons (dashboard, responses, scale page, shared dashboard), error boundaries (app shell, public pages, global), translated toasts for every new action; axe (WCAG 2.1 A/AA) clean on login, builder, public form and dashboard, no horizontal scrolling at 360 px; security headers; `pnpm check:secrets`; viewers can no longer read raw answers (email / phone answers masked in every RPC).
+- **Tests**: Vitest 349 tests (19 files; new: export format / streams incl. 100k rows, scale integration suite: summary == raw, summary == rebuild after inserts / deletes, export keyset + masking, viewer answer privacy, share-link RLS, demo filtering and privileges); Playwright 21 tests, all passing in 4.1 min (new: cross-role journey with mobile respondent, live dashboard, viewer, public link with polling and revoke, CSV / XLSX export; accessibility + 360 px + print; scale page).
+- **Docs**: README (setup, env table, scripts, Vercel `sin1` deploy, post-deploy checklist), `docs/supabase-setup.md` (rewritten step by step against the real migrations and commands), `docs/scale-report.md`, architecture (summaries, export, public links, data sources, demo tools, headers).
+
+### Decisions
+
+1. **Summary tables maintained by triggers** (the spec's last-resort option) after the cheaper ones were tried and measured: indexes could not help (the default dashboard reads every answer), narrower queries got 10k to ~400 ms but 100k stayed at ~5 s. Statement-level triggers with transition tables keep submissions cheap (one indexed lookup per answer) and a per-form advisory lock prevents deadlocks. Deletes rebuild the touched Jakarta days because the cascaded answers are gone by the time a statement trigger runs.
+2. **Day / hour grain** so every date preset (WIB calendar days) and custom range is served from the summaries; device and language are part of the key (drill-down on them stays fast). Answer filters (drill-down on a chart) use the raw path, rewritten set-based.
+3. **Exactness over approximation**: medians, quantiles and standard deviations are computed from value counts with the same formulas Postgres uses; the integration test compares the JSON of both paths. Only `cross_suggestions` (a hint) samples the latest 5,000 responses.
+4. **Viewers lose direct table access to `response_answers`** (security review): identifiers were masked in Phase 4, but email / phone _answers_ were readable by viewers through the table and the RPCs. All reads now go through RPCs that mask them; the RLS policies stay as a second layer.
+5. **Pluggable data source** for `DashboardView` instead of a second public dashboard: the same widgets render app, public and scale-page dashboards (Supabase / share API / timed demo API).
+6. **Browser-driven demo jobs**: PostgREST stops statements after 8 s and serverless functions are short-lived, so generation (500 per call), cleanup (20,000 per call) and the simulator are short calls driven by the page.
+7. **Share tokens generated in Node** (32 random bytes, base64url) and stored through RLS as the signed-in user; the admin client is used only after a token resolved to an active share.
+8. **Public forms stay embeddable** (no frame protection on `/{locale}/f/...`); all other pages send `X-Frame-Options: DENY` + `frame-ancestors 'none'`.
+9. **Loading skeletons only below access checks**: a `loading.tsx` above a layout or page that calls `forbidden()` / `notFound()` makes Next stream the response, which then keeps HTTP 200 (caught by the HTTP route tests). Skeletons live under `forms/[id]` (whose layout checks access) and on the scale / shared-dashboard pages; the forms list, builder and admin pages render without one.
+10. **Migration editing during the phase**: `20261017090000_phase5_scale_export.sql` was iterated locally (applied via psql for measurements) before it was ever applied through the migration tooling, then verified with a full `supabase db reset` + `db lint`. Applied migrations from earlier phases were not touched.
+
+### Known gaps
+
+- Measured on Docker Desktop / Windows; repeat `pnpm bench:dashboard` on staging (hosted Supabase in Singapore) before launch.
+- Answer-filtered dashboards (drill-down) and `cross_stats` read raw rows: p95 2.0 s (answer filter) and 1.6 s (`cross_stats`) at 100k.
+- The demo generator gets slower as the tables grow (bulk trigger joins scan `responses`): ~2.6 ms per response at 50–100k (100k ≈ 4–5 minutes from the scale page). Real submissions are single rows and use the primary-key index.
+- Summaries assume responses are immutable; changing `submitted_at`, version, device or language with the secret key requires `rebuild_dashboard_summary(form_id)`.
+- The XLSX backpressure relies on exceljs 4.4.0 internals (`zip.pointer()`, stream pipes); the version is pinned and covered by a unit test.
+- Bulk demo generation produces Realtime INSERT events for every row; other open dashboards of the demo form receive them (the scale page switches its own preview to polling during jobs).
+- Printing via the browser menu (Ctrl+P) instead of the button keeps the screen grid, which may split widgets; the button is the supported path.
+- `pnpm e2e` uses 2 workers locally; the journey test takes ~1.5 minutes.
+
+### Manual verification checklist
+
+- [ ] `pnpm db:reset && pnpm seed && pnpm seed:demo`, `pnpm dev`.
+- [ ] Editor > demo form > Dashboard: Export > CSV and Excel; open both in Excel. Indonesian text intact, one row per response, option labels, `Summary` sheet counts match the dashboard. Apply "Last 7 days" and export again: fewer rows.
+- [ ] Viewer (shared on the demo form): export has no identifier columns and masked email answers; Responses tab shows masked emails; there is no Share button.
+- [ ] Share > Create link (valid until tomorrow, free text off) > open it in a private window: no login, "Auto-refresh every 10 s", only the date filter, text widgets say free-text is hidden, no identifiers. Submit the public form: the shared dashboard updates within ~10 s. Turn on "Include free-text answers": latest answers appear. Deactivate, Regenerate (old URL dies), Revoke: the page says the link is not available.
+- [ ] Print / Save as PDF: two columns, no buttons, no widget cut in half; dark mode prints light.
+- [ ] Admin > Demo tools (with `ENABLE_DEMO_TOOLS=true`): banner; Create demo form; Generate 10,000 over 30 days (progress, duration); total 10,000; performance panel green for `dashboard_bundle`; simulator 20/s: counter moves smoothly, charts refresh every few seconds; Stop; Clear demo data: total 0.
+- [ ] Forms list hides demo forms; "Show demo forms" shows them with a Demo badge.
+- [ ] Set `ENABLE_DEMO_TOOLS=false`, restart: the demo page says tools are off and its actions return "not allowed".
+- [ ] `pnpm build && pnpm check:secrets` passes; `curl -I http://localhost:3000/id/login` shows the security headers; `/id/f/<slug>` has no `X-Frame-Options`.
+- [ ] 360 px wide (DevTools): login, public form, forms list, dashboard without horizontal scrolling.

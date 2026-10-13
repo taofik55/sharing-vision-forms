@@ -143,7 +143,10 @@ export function WidgetCard({
               <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
             )}
           </div>
-          <div className="flex shrink-0 items-center" data-no-export="true">
+          <div
+            className="flex shrink-0 items-center print:hidden"
+            data-no-export="true"
+          >
             {help && (
               <Popover>
                 <PopoverTrigger asChild>

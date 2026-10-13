@@ -179,7 +179,12 @@ describe("parseFormsQuery", () => {
       sort: "updated_desc",
       view: "table",
       page: 1,
+      demo: false,
     });
+  });
+  it("shows demo forms only with demo=1", () => {
+    expect(parseFormsQuery({ demo: "1" }).demo).toBe(true);
+    expect(parseFormsQuery({ demo: "yes" }).demo).toBe(false);
   });
   it("parses valid values", () => {
     expect(

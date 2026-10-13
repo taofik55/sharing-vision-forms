@@ -9,6 +9,7 @@ import {
   Pause,
   PencilRuler,
   Play,
+  Printer,
   RefreshCw,
   RotateCcw,
 } from "lucide-react";
@@ -46,9 +47,14 @@ import {
   type DashboardContextValue,
 } from "./dashboard-context";
 import { DashboardGrid } from "./dashboard-grid";
+import { ExportMenu } from "./export-menu";
 import { FilterBar } from "./filter-bar";
+import { ShareDialog } from "./share-dialog";
 import {
   bundleKey,
+  DataSourceProvider,
+  supabaseSource,
+  type DataSource,
   useDashboardBundle,
   useInvalidateDashboard,
   useLiveResponses,
@@ -69,6 +75,8 @@ import {
   TextWidget,
 } from "./widgets";
 
+export type DashboardMode = "app" | "public" | "preview";
+
 export type DashboardViewProps = {
   formId: string;
   canEdit: boolean;
@@ -80,20 +88,45 @@ export type DashboardViewProps = {
   initialRpcFilters: RpcFilters;
   initialBundle: DashboardBundle;
   isDemo: boolean;
+  /**
+   * app: signed-in dashboard (Realtime, URL filters, editing, share, export).
+   * public: share link (10 s polling, date filter only, no drill-down).
+   * preview: scale page (Realtime, local filters, no editing).
+   */
+  mode?: DashboardMode;
+  /** Data source for public / preview dashboards (default: Supabase as the user). */
+  source?: DataSource;
+  /** Show free-text content (top terms, latest answers). */
+  textAnswers?: boolean;
+  /** Called after new bundle data has been rendered (ms since it arrived). */
+  onRendered?: (ms: number) => void;
+  /** Realtime on/off (the scale page turns it off during bulk jobs and polls). */
+  liveEnabled?: boolean;
 };
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-export function DashboardView(props: DashboardViewProps) {
+export function DashboardView({ source, ...props }: DashboardViewProps) {
+  return (
+    <DataSourceProvider value={source ?? supabaseSource}>
+      <DashboardViewInner {...props} />
+    </DataSourceProvider>
+  );
+}
+
+function DashboardViewInner(props: Omit<DashboardViewProps, "source">) {
   const t = useTranslations();
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const mode = props.mode ?? "app";
+  const canEdit = props.canEdit && mode === "app";
   const [filters, setFiltersState] = useState(props.initialFilters);
   const [config, setConfigState] = useState(props.initialConfig);
   const [editMode, setEditMode] = useState(false);
   const [paused, setPaused] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [confirmReset, setConfirmReset] = useState(false);
   const [flashing, setFlashing] = useState<Set<string>>(new Set());
@@ -103,11 +136,15 @@ export function DashboardView(props: DashboardViewProps) {
   const rpcFilters = useStable(toRpcFilters(filters));
   const live = useLiveResponses({
     formId: props.formId,
+    enabled: mode !== "public" && (props.liveEnabled ?? true),
     paused,
-    onInsert: (row) => {
+    onInsert: (rows) => {
       setLastEventAt(Date.now());
       // Instant counter: bump the cached totals; the debounced refetch corrects them.
-      if (isWithinDateWindow(filters, row.submitted_at)) {
+      const inWindow = rows.filter((row) =>
+        isWithinDateWindow(filters, row.submitted_at),
+      ).length;
+      if (inWindow) {
         queryClient.setQueryData<DashboardBundle>(
           bundleKey(props.formId, rpcFilters),
           (old) =>
@@ -116,9 +153,9 @@ export function DashboardView(props: DashboardViewProps) {
                   ...old,
                   overview: {
                     ...old.overview,
-                    total: old.overview.total + 1,
-                    today: old.overview.today + 1,
-                    last7: old.overview.last7 + 1,
+                    total: old.overview.total + inWindow,
+                    today: old.overview.today + inWindow,
+                    last7: old.overview.last7 + inWindow,
                   },
                 }
               : old,
@@ -131,12 +168,26 @@ export function DashboardView(props: DashboardViewProps) {
     props.formId,
     rpcFilters,
     { filters: props.initialRpcFilters, data: props.initialBundle },
-    live.polling || presenting,
+    // Anonymous viewers cannot use Realtime: poll every 10 s.
+    mode === "public" ||
+      props.liveEnabled === false ||
+      live.polling ||
+      presenting,
   );
   const bundle = bundleQuery.data;
 
   // Dependent queries (cross-tabs, text answers) refetch when new data arrives.
   const dataVersion = bundleQuery.dataUpdatedAt;
+
+  // Render time of fresh data (scale page performance panel).
+  const { onRendered } = props;
+  useEffect(() => {
+    if (!onRendered || !dataVersion) return;
+    const frame = requestAnimationFrame(() =>
+      onRendered(Date.now() - dataVersion),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [dataVersion, onRendered]);
 
   // Briefly highlight widgets whose numbers changed.
   const previous = useRef<DashboardBundle | undefined>(bundle);
@@ -169,10 +220,11 @@ export function DashboardView(props: DashboardViewProps) {
   const setFilters = useCallback(
     (next: DashboardFilters) => {
       setFiltersState(next);
+      if (mode === "preview") return;
       const qs = serializeFilters(next).toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [router, pathname],
+    [router, pathname, mode],
   );
 
   // Debounced persistence of the config (editors only, after a user change).
@@ -182,13 +234,13 @@ export function DashboardView(props: DashboardViewProps) {
   const saveSeq = useRef(0);
   const setConfig = useCallback(
     (updater: (c: DashboardConfig) => DashboardConfig) => {
-      if (!props.canEdit) return;
+      if (!canEdit) return;
       userChanged.current = true;
       saveSeq.current += 1;
       setSaveState("saving");
       setConfigState(updater);
     },
-    [props.canEdit],
+    [canEdit],
   );
   useEffect(() => {
     if (!userChanged.current) return;
@@ -268,6 +320,29 @@ export function DashboardView(props: DashboardViewProps) {
     [editMode, setConfig],
   );
 
+  // Print / Save as PDF: static two-column layout at a fixed width, so charts
+  // measure themselves for the page before the print dialog takes a snapshot.
+  // Paper is white: print in the light theme, then restore the dark one.
+  const restoreDark = useRef(false);
+  useEffect(() => {
+    const done = () => {
+      setPrinting(false);
+      if (restoreDark.current) document.documentElement.classList.add("dark");
+      restoreDark.current = false;
+    };
+    window.addEventListener("afterprint", done);
+    return () => window.removeEventListener("afterprint", done);
+  }, []);
+  async function startPrint() {
+    setEditMode(false);
+    setPrinting(true);
+    const root = document.documentElement;
+    restoreDark.current = root.classList.contains("dark");
+    root.classList.remove("dark");
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    window.print();
+  }
+
   // Presentation (TV) mode: full screen, larger type, periodic refresh.
   useEffect(() => {
     const onChange = () => {
@@ -311,13 +386,15 @@ export function DashboardView(props: DashboardViewProps) {
     rpcFilters,
     setFilters,
     editMode,
-    canEdit: props.canEdit,
+    canEdit,
     updateWidget,
     removeWidget,
     addWidget,
     flashing,
     dataVersion,
     presenting,
+    drillDown: mode !== "public",
+    textAnswers: props.textAnswers ?? true,
   };
 
   const visible = config.widgets.filter((w) => editMode || !w.hidden);
@@ -363,8 +440,10 @@ export function DashboardView(props: DashboardViewProps) {
           "flex flex-col gap-4",
           presenting &&
             "fixed inset-0 z-50 overflow-auto bg-background p-6 text-lg",
+          printing && "fp-printing",
         )}
         data-testid="dashboard"
+        data-mode={mode}
       >
         <DashboardHeader
           config={config}
@@ -382,6 +461,7 @@ export function DashboardView(props: DashboardViewProps) {
           lastEventAt={lastEventAt}
           fetching={bundleQuery.isFetching}
           presenting={presenting}
+          mode={mode}
         >
           {!presenting && (
             <Button
@@ -396,7 +476,22 @@ export function DashboardView(props: DashboardViewProps) {
               />
             </Button>
           )}
-          {props.canEdit && !presenting && (
+          {mode === "app" && !presenting && (
+            <ExportMenu formId={props.formId} filters={filters} />
+          )}
+          {canEdit && !presenting && <ShareDialog formId={props.formId} />}
+          {!presenting && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void startPrint()}
+              data-testid="print-dashboard"
+            >
+              <Printer aria-hidden />
+              {t("dashboard.print")}
+            </Button>
+          )}
+          {canEdit && !presenting && (
             <>
               {editMode && (
                 <>
@@ -438,15 +533,18 @@ export function DashboardView(props: DashboardViewProps) {
         </DashboardHeader>
 
         {!presenting && (
-          <FilterBarWithLabels
-            filters={filters}
-            setFilters={setFilters}
-            questions={props.questions}
-            versions={props.versions}
-          />
+          <div className="print:hidden">
+            <FilterBarWithLabels
+              filters={filters}
+              setFilters={setFilters}
+              questions={props.questions}
+              versions={props.versions}
+              dateOnly={mode === "public"}
+            />
+          </div>
         )}
-        {!props.canEdit && !presenting && (
-          <p className="text-xs text-muted-foreground">
+        {mode === "app" && !canEdit && !presenting && (
+          <p className="text-xs text-muted-foreground print:hidden">
             {t("dashboard.viewerHint")}
           </p>
         )}
@@ -454,6 +552,7 @@ export function DashboardView(props: DashboardViewProps) {
         <DashboardGrid
           widgets={visible}
           editMode={editMode}
+          printing={printing}
           onLayoutChange={onLayoutChange}
           render={render}
         />
@@ -480,11 +579,13 @@ function FilterBarWithLabels({
   setFilters,
   questions,
   versions,
+  dateOnly,
 }: {
   filters: DashboardFilters;
   setFilters: (f: DashboardFilters) => void;
   questions: Record<string, Question>;
   versions: { id: string; number: number }[];
+  dateOnly: boolean;
 }) {
   const labels = useLabels();
   return (
@@ -493,6 +594,7 @@ function FilterBarWithLabels({
       onChange={setFilters}
       questions={questions}
       versions={versions}
+      dateOnly={dateOnly}
       optionLabel={labels.optionLabel}
       deviceLabel={labels.deviceLabel}
       languageLabel={labels.languageLabel}
@@ -538,10 +640,10 @@ function LiveBadge({
   const { format } = useLabels();
   const now = useNow();
   const tone =
-    status === "live"
-      ? "bg-emerald-600/15 text-emerald-700 dark:text-emerald-400"
+    status === "live" || status === "polling"
+      ? "bg-emerald-600/15 text-emerald-800 dark:text-emerald-400"
       : status === "reconnecting"
-        ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+        ? "bg-amber-500/15 text-amber-800 dark:text-amber-400"
         : "bg-muted text-muted-foreground";
   const seconds =
     lastAt && now ? Math.max(0, Math.round((now - lastAt) / 1000)) : null;
@@ -562,20 +664,22 @@ function LiveBadge({
         />
         {t(status)}
       </Badge>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-7"
-        onClick={onToggle}
-        aria-label={status === "paused" ? t("resume") : t("pause")}
-        data-testid="live-toggle"
-      >
-        {status === "paused" ? (
-          <Play className="size-4" aria-hidden />
-        ) : (
-          <Pause className="size-4" aria-hidden />
-        )}
-      </Button>
+      {status !== "polling" && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 print:hidden"
+          onClick={onToggle}
+          aria-label={status === "paused" ? t("resume") : t("pause")}
+          data-testid="live-toggle"
+        >
+          {status === "paused" ? (
+            <Play className="size-4" aria-hidden />
+          ) : (
+            <Pause className="size-4" aria-hidden />
+          )}
+        </Button>
+      )}
       <span
         className="text-xs text-muted-foreground"
         data-testid="last-response"
@@ -607,6 +711,7 @@ function DashboardHeader({
   onTogglePause,
   lastEventAt,
   presenting,
+  mode,
   children,
 }: {
   config: DashboardConfig;
@@ -624,6 +729,7 @@ function DashboardHeader({
   lastEventAt: number | null;
   fetching: boolean;
   presenting: boolean;
+  mode: DashboardMode;
   children: React.ReactNode;
 }) {
   const t = useTranslations();
@@ -699,7 +805,7 @@ function DashboardHeader({
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1 print:hidden">
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="sm" data-testid="about-data">
@@ -750,12 +856,14 @@ function DashboardHeader({
                   </dt>
                   <dd>{format.number(o?.total ?? 0)}</dd>
                 </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    {t("dashboard.about.creator")}
-                  </dt>
-                  <dd>{bundle?.form.creator}</dd>
-                </div>
+                {mode !== "public" && bundle?.form.creator && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">
+                      {t("dashboard.about.creator")}
+                    </dt>
+                    <dd>{bundle.form.creator}</dd>
+                  </div>
+                )}
                 {bundle && (
                   <p className="text-xs text-muted-foreground">
                     {t("dashboard.generatedAt", {

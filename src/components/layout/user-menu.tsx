@@ -35,7 +35,9 @@ export function UserMenu({ fullName, email }: UserMenuProps) {
           aria-label={t("userMenu")}
         >
           <Avatar className="size-8">
-            <AvatarFallback>{initials(fullName ?? email)}</AvatarFallback>
+            <AvatarFallback className="text-foreground">
+              {initials(fullName ?? email)}
+            </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>

@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      answer_summary: {
+        Row: {
+          cnt: number;
+          day: string;
+          device: string;
+          form_id: string;
+          form_version_id: string;
+          kind: unknown;
+          locale: string;
+          question_key: string;
+          total: number | null;
+          value: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          cnt: number;
+          day: string;
+          device: string;
+          form_id: string;
+          form_version_id: string;
+          kind: unknown;
+          locale: string;
+          question_key: string;
+          total?: number | null;
+          value: string;
+        };
+        Update: {
+          cnt?: number;
+          day?: string;
+          device?: string;
+          form_id?: string;
+          form_version_id?: string;
+          kind?: unknown;
+          locale?: string;
+          question_key?: string;
+          total?: number | null;
+          value?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "answer_summary_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "forms";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       dashboard_shares: {
         Row: {
           created_at: string;
@@ -417,6 +465,54 @@ export type Database = {
           },
         ];
       };
+      response_summary: {
+        Row: {
+          cnt: number;
+          device: string;
+          dur_n: number;
+          dur_sum: number;
+          first_at: string;
+          form_id: string;
+          form_version_id: string;
+          hour: string;
+          last_at: string;
+          locale: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          cnt: number;
+          device: string;
+          dur_n: number;
+          dur_sum: number;
+          first_at: string;
+          form_id: string;
+          form_version_id: string;
+          hour: string;
+          last_at: string;
+          locale: string;
+        };
+        Update: {
+          cnt?: number;
+          device?: string;
+          dur_n?: number;
+          dur_sum?: number;
+          first_at?: string;
+          form_id?: string;
+          form_version_id?: string;
+          hour?: string;
+          last_at?: string;
+          locale?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "response_summary_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "forms";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       responses: {
         Row: {
           device: string | null;
@@ -502,6 +598,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      _answer_summary_sql: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      _answer_text: {
+        Args: { p_full: boolean; p_text: string; p_type: string };
+        Returns: string;
+      };
       _assert_can_view: { Args: { p_form_id: string }; Returns: undefined };
       _bundle_questions: {
         Args: { p_filters: Json; p_form_id: string; p_only_key?: string };
@@ -513,6 +617,10 @@ export type Database = {
         Returns: Json;
       };
       _dashboard_overview: {
+        Args: { p_filters: Json; p_form_id: string };
+        Returns: Json;
+      };
+      _dashboard_overview_raw: {
         Args: { p_filters: Json; p_form_id: string };
         Returns: Json;
       };
@@ -547,11 +655,20 @@ export type Database = {
           version_numbers: number[];
         }[];
       };
+      _lock_form_summary: { Args: { p_form_id: string }; Returns: undefined };
       _question_meta: {
         Args: { p_form_id: string; p_key: string };
         Returns: Json;
       };
+      _rebuild_summary_slice: {
+        Args: { p_form_id: string; p_from: string; p_to: string };
+        Returns: undefined;
+      };
       _stop_words: { Args: Record<PropertyKey, never>; Returns: string[] };
+      _summary_filters_ok: {
+        Args: { p_day: boolean; p_filters: Json };
+        Returns: boolean;
+      };
       add_form_member: {
         Args: {
           p_email: string;
@@ -605,13 +722,38 @@ export type Database = {
         Args: { p_filters?: Json; p_form_id: string };
         Returns: Json;
       };
-      delete_demo_responses: { Args: { p_form_id: string }; Returns: number };
+      delete_demo_responses: {
+        Args: { p_form_id: string; p_limit?: number };
+        Returns: number;
+      };
       delete_response_draft: {
         Args: { p_draft_token: string; p_form_id: string };
         Returns: undefined;
       };
+      export_responses: {
+        Args: {
+          p_after_at?: string;
+          p_after_id?: string;
+          p_filters?: Json;
+          p_form_id: string;
+          p_limit?: number;
+        };
+        Returns: {
+          answers: Json;
+          id: string;
+          identifier_email: string;
+          identifier_phone: string;
+          submitted_at: string;
+          version_number: number;
+        }[];
+      };
       generate_demo_responses: {
-        Args: { p_days?: number; p_form_id: string; p_n: number };
+        Args: {
+          p_days?: number;
+          p_form_id: string;
+          p_live?: boolean;
+          p_n: number;
+        };
         Returns: number;
       };
       get_response: { Args: { p_response_id: string }; Returns: Json };
@@ -640,6 +782,7 @@ export type Database = {
       };
       list_forms: {
         Args: {
+          p_include_demo?: boolean;
           p_limit?: number;
           p_offset?: number;
           p_owner?: string;
@@ -655,6 +798,7 @@ export type Database = {
           current_version_number: number;
           has_unpublished_changes: boolean;
           id: string;
+          is_demo: boolean;
           last_response_at: string;
           owner_id: string;
           owner_name: string;
@@ -705,6 +849,10 @@ export type Database = {
           submitted_at: string;
           value: string;
         }[];
+      };
+      rebuild_dashboard_summary: {
+        Args: { p_form_id?: string };
+        Returns: number;
       };
       save_response_draft: {
         Args: {

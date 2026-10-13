@@ -37,6 +37,8 @@ export const formsQuerySchema = z.object({
   page: z
     .preprocess(one, z.coerce.number().int().min(1).max(10_000).catch(1))
     .default(1),
+  /** "Show demo forms" (hidden by default). */
+  demo: z.preprocess((v) => one(v) === "1", z.boolean()).default(false),
 });
 
 export type FormsQuery = z.output<typeof formsQuerySchema>;

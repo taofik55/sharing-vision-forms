@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 export function PublicShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-svh flex-col bg-muted/40">
-      <header className="flex justify-end gap-1 p-4">
+      <header className="flex justify-end gap-1 p-4 print:hidden">
         <LanguageSwitcher />
         <ThemeToggle />
       </header>

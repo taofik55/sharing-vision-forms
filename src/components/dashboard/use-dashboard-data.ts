@@ -2,7 +2,9 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -23,6 +25,64 @@ export function supabaseBrowser() {
   return browserClient;
 }
 
+export type DashboardRpc =
+  | "dashboard_bundle"
+  | "cross_stats"
+  | "cross_suggestions"
+  | "question_text_answers";
+
+/**
+ * Where dashboard data comes from: Supabase as the signed-in user (app), the
+ * share-token API (public dashboards) or the timed demo API (scale page).
+ */
+export type DataSource = {
+  call: <T>(fn: DashboardRpc, args: Record<string, unknown>) => Promise<T>;
+};
+
+export const supabaseSource: DataSource = {
+  call: async <T>(fn: DashboardRpc, args: Record<string, unknown>) => {
+    const { data, error } = await supabaseBrowser().rpc(fn, args as never);
+    if (error) throw error;
+    return data as T;
+  },
+};
+
+/** Public dashboards: GET /api/d/:token/stats (date range only). */
+export function publicSource(token: string): DataSource {
+  return {
+    call: async <T>(fn: DashboardRpc, args: Record<string, unknown>) => {
+      const params = new URLSearchParams();
+      const filters = (args.p_filters ?? {}) as { from?: string; to?: string };
+      if (filters.from) params.set("from", filters.from);
+      if (filters.to) params.set("to", filters.to);
+      if (fn === "dashboard_bundle") params.set("fn", "bundle");
+      else if (fn === "cross_suggestions") params.set("fn", "suggestions");
+      else if (fn === "cross_stats") {
+        params.set("fn", "cross");
+        params.set("a", String(args.p_question_a));
+        params.set("b", String(args.p_question_b));
+      } else {
+        params.set("fn", "text");
+        params.set("key", String(args.p_question_key));
+        if (args.p_before_at) params.set("before_at", String(args.p_before_at));
+        if (args.p_before_id) params.set("before_id", String(args.p_before_id));
+      }
+      const response = await fetch(
+        `/api/d/${encodeURIComponent(token)}/stats?${params}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) throw new Error(`stats ${response.status}`);
+      return (await response.json()) as T;
+    },
+  };
+}
+
+const DataSourceContext = createContext<DataSource>(supabaseSource);
+export const DataSourceProvider = DataSourceContext;
+export function useDataSource(): DataSource {
+  return useContext(DataSourceContext);
+}
+
 export const bundleKey = (formId: string, filters: RpcFilters) =>
   ["dashboard-bundle", formId, filters] as const;
 
@@ -33,19 +93,17 @@ export function useDashboardBundle(
   initial: { filters: RpcFilters; data: DashboardBundle } | null,
   polling: boolean,
 ) {
+  const source = useDataSource();
   const sameAsInitial =
     initial !== null &&
     JSON.stringify(initial.filters) === JSON.stringify(filters);
   return useQuery({
     queryKey: bundleKey(formId, filters),
-    queryFn: async () => {
-      const { data, error } = await supabaseBrowser().rpc("dashboard_bundle", {
+    queryFn: () =>
+      source.call<DashboardBundle>("dashboard_bundle", {
         p_form_id: formId,
-        p_filters: filters as never,
-      });
-      if (error) throw error;
-      return data as unknown as DashboardBundle;
-    },
+        p_filters: filters,
+      }),
     initialData: sameAsInitial ? initial.data : undefined,
     placeholderData: (previous) => previous,
     refetchInterval: polling ? 10_000 : false,
@@ -59,19 +117,17 @@ export function useCrossStats(
   filters: RpcFilters,
   version: number,
 ) {
+  const source = useDataSource();
   return useQuery({
     queryKey: ["cross-stats", formId, a, b, filters, version],
     enabled: Boolean(a && b && a !== b),
-    queryFn: async () => {
-      const { data, error } = await supabaseBrowser().rpc("cross_stats", {
+    queryFn: () =>
+      source.call<CrossStats>("cross_stats", {
         p_form_id: formId,
-        p_question_a: a!,
-        p_question_b: b!,
-        p_filters: filters as never,
-      });
-      if (error) throw error;
-      return data as unknown as CrossStats;
-    },
+        p_question_a: a,
+        p_question_b: b,
+        p_filters: filters,
+      }),
     placeholderData: (previous) => previous,
   });
 }
@@ -84,28 +140,31 @@ export function useCrossSuggestions(
 ) {
   // Re-rank when the dataset grows by ~10% (bucketed), not on every response.
   const bucket = Math.floor(Math.log(Math.max(total, 1)) / Math.log(1.1));
+  const source = useDataSource();
   return useQuery({
     queryKey: ["cross-suggestions", formId, filters, bucket],
-    queryFn: async () => {
-      const { data, error } = await supabaseBrowser().rpc("cross_suggestions", {
+    queryFn: () =>
+      source.call<CrossSuggestion[]>("cross_suggestions", {
         p_form_id: formId,
-        p_filters: filters as never,
-      });
-      if (error) throw error;
-      return data as unknown as CrossSuggestion[];
-    },
+        p_filters: filters,
+      }),
     staleTime: 5 * 60_000,
     placeholderData: (previous) => previous,
   });
 }
 
-export type LiveStatus = "live" | "reconnecting" | "paused";
+export type LiveStatus = "live" | "reconnecting" | "paused" | "polling";
 
 type LiveOptions = {
   formId: string;
+  /** False on public dashboards (anonymous users cannot use Realtime). */
+  enabled: boolean;
   paused: boolean;
-  /** Called immediately for each INSERT visible to this user. */
-  onInsert: (row: { id: string; submitted_at: string }) => void;
+  /**
+   * INSERTs visible to this user, batched: at most one call per 250 ms, so
+   * counters re-render at most 4 times per second at high insert rates.
+   */
+  onInsert: (rows: { id: string; submitted_at: string }[]) => void;
   /** Debounced: 1.5 s trailing, at most 5 s after the first event. */
   onRefetch: () => void;
 };
@@ -116,6 +175,7 @@ type LiveOptions = {
  */
 export function useLiveResponses({
   formId,
+  enabled,
   paused,
   onInsert,
   onRefetch,
@@ -126,6 +186,10 @@ export function useLiveResponses({
   const handlers = useRef({ onInsert, onRefetch });
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxWait = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Event batching (<= 4 UI updates per second).
+  const inserted = useRef<{ id: string; submitted_at: string }[]>([]);
+  const pendingDelta = useRef(0);
+  const batchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     handlers.current = { onInsert, onRefetch };
@@ -146,7 +210,20 @@ export function useLiveResponses({
     maxWait.current ??= setTimeout(flush, 5000);
   }, [flush]);
 
+  const queueUiUpdate = useCallback(() => {
+    batchTimer.current ??= setTimeout(() => {
+      batchTimer.current = null;
+      const rows = inserted.current;
+      inserted.current = [];
+      const delta = pendingDelta.current;
+      pendingDelta.current = 0;
+      if (rows.length) handlers.current.onInsert(rows);
+      if (delta) setPending((n) => n + delta);
+    }, 250);
+  }, []);
+
   useEffect(() => {
+    if (!enabled) return;
     const supabase = supabaseBrowser();
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
@@ -171,12 +248,12 @@ export function useLiveResponses({
           },
           (payload) => {
             const row = payload.new as { id: string; submitted_at: string };
-            if (pausedRef.current) {
-              setPending((n) => n + 1);
-              return;
+            if (pausedRef.current) pendingDelta.current += 1;
+            else {
+              inserted.current.push(row);
+              schedule();
             }
-            handlers.current.onInsert(row);
-            schedule();
+            queueUiUpdate();
           },
         )
         // DELETE payloads only carry the primary key (and cannot be filtered),
@@ -185,8 +262,10 @@ export function useLiveResponses({
           "postgres_changes",
           { event: "DELETE", schema: "public", table: "responses" },
           () => {
-            if (pausedRef.current) setPending((n) => n + 1);
-            else schedule();
+            if (pausedRef.current) {
+              pendingDelta.current += 1;
+              queueUiUpdate();
+            } else schedule();
           },
         )
         .subscribe((status) => {
@@ -204,15 +283,19 @@ export function useLiveResponses({
       cancelled = true;
       if (debounce.current) clearTimeout(debounce.current);
       if (maxWait.current) clearTimeout(maxWait.current);
+      if (batchTimer.current) clearTimeout(batchTimer.current);
+      batchTimer.current = null;
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [formId, schedule]);
+  }, [formId, enabled, schedule, queueUiUpdate]);
 
-  const status: LiveStatus = paused
-    ? "paused"
-    : connected === false
-      ? "reconnecting"
-      : "live";
+  const status: LiveStatus = !enabled
+    ? "polling"
+    : paused
+      ? "paused"
+      : connected === false
+        ? "reconnecting"
+        : "live";
 
   const applyPending = useCallback(() => {
     setPending(0);
@@ -221,7 +304,7 @@ export function useLiveResponses({
 
   return {
     status,
-    polling: connected === false && !paused,
+    polling: enabled && connected === false && !paused,
     pending,
     applyPending,
   };

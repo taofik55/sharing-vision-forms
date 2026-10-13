@@ -24,7 +24,7 @@ export default async function FormLayout({
       <div className="flex flex-col gap-2">
         <Link
           href="/forms"
-          className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground print:hidden"
         >
           <ArrowLeft className="size-4" aria-hidden />
           {t("backToForms")}
@@ -39,7 +39,9 @@ export default async function FormLayout({
           <FormStatusBadge status={form.status} />
         </div>
       </div>
-      <FormTabs formId={form.id} tabs={tabs} />
+      <div className="print:hidden">
+        <FormTabs formId={form.id} tabs={tabs} />
+      </div>
       {children}
     </div>
   );

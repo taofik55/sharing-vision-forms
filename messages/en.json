@@ -177,13 +177,19 @@
         "name": "Employee Feedback",
         "description": "Anonymous satisfaction and suggestions."
       }
-    }
+    },
+    "showDemo": "Show demo forms",
+    "demoBadge": "Demo"
   },
   "errors": {
     "forbiddenTitle": "Access denied",
     "forbiddenDescription": "You do not have permission to view this page.",
     "notFoundTitle": "Page not found",
-    "notFoundDescription": "The page you are looking for does not exist."
+    "notFoundDescription": "The page you are looking for does not exist.",
+    "boundaryTitle": "Something went wrong",
+    "boundaryDescription": "This part of the page could not be loaded. Try again; if it keeps failing, contact an administrator.",
+    "retry": "Try again",
+    "reference": "Reference: {digest}"
   },
   "adminUsers": {
     "title": "Users",
@@ -231,7 +237,75 @@
   "demo": {
     "title": "Demo tools",
     "subtitle": "Generate demo data to test dashboards at scale.",
-    "disabled": "Demo tools are disabled. Set ENABLE_DEMO_TOOLS=true to enable them."
+    "disabled": "Demo tools are disabled. Set ENABLE_DEMO_TOOLS=true to enable them.",
+    "disabledTitle": "Demo tools are off",
+    "banner": {
+      "title": "Demo data",
+      "description": "Everything on this page is synthetic (is_demo = true) and lives in the \"Scale test (Demo)\" form. Demo forms are hidden from the forms list unless \"Show demo forms\" is on."
+    },
+    "setup": {
+      "title": "No demo form yet",
+      "description": "Create the \"Scale test (Demo)\" form to generate data and watch the dashboard.",
+      "button": "Create demo form"
+    },
+    "generate": {
+      "title": "Generate responses",
+      "description": "Inserted by generate_demo_responses() inside the database, 500 per call.",
+      "count": "Responses to add",
+      "spread": "Spread over",
+      "days": "{days} days",
+      "button": "Generate"
+    },
+    "cancel": "Cancel",
+    "generated": "Added {count, plural, one {# response} other {# responses}} in {seconds} s.",
+    "cleared": "Deleted {count, plural, one {# demo response} other {# demo responses}}.",
+    "currentTotal": "Current total",
+    "simulator": {
+      "title": "Live simulator",
+      "description": "Submits responses every second so you can watch the dashboard update.",
+      "rate": "Rate",
+      "perSecond": "{rate}/s",
+      "start": "Start",
+      "stop": "Stop",
+      "sent": "{count, plural, one {# response sent} other {# responses sent}}",
+      "tick": "last call {ms} ms",
+      "tabNote": "The browser drives the simulation (one server call per second). Closing or reloading this tab stops it."
+    },
+    "clear": {
+      "title": "Clear demo data",
+      "description": "Deletes only is_demo responses of the demo form, in chunks of 20,000.",
+      "button": "Clear demo data",
+      "confirmTitle": "Delete all demo responses?",
+      "confirmDescription": "Real responses are never touched. This cannot be undone."
+    },
+    "progress": {
+      "generating": "Generated {done} of {target}",
+      "clearing": "Deleted {done}",
+      "elapsed": "{seconds} s",
+      "finished": "Done in {seconds} s",
+      "label": "Progress"
+    },
+    "errors": {
+      "generic": "The demo action failed. Check the server log and try again."
+    },
+    "performance": {
+      "title": "Performance",
+      "description": "Real dashboard calls, last {window} per kind. Times in ms.",
+      "total": "Responses",
+      "server": "Server (API → DB)",
+      "roundTrip": "Round trip",
+      "p50p95": "p50 / p95 (n = {n})",
+      "payload": "Payload",
+      "noCalls": "No calls yet.",
+      "render": "Dashboard render",
+      "last": "Last",
+      "legend": "Green: within target (dashboard_bundle 400 ms, render 100 ms). Amber: up to 1 s (render 300 ms). Red: slower.",
+      "level": {
+        "good": "within target",
+        "ok": "near target",
+        "bad": "over target"
+      }
+    }
   },
   "publicForm": {
     "title": "Form",
@@ -292,8 +366,10 @@
     }
   },
   "publicDashboard": {
-    "title": "Dashboard",
-    "placeholder": "Shared dashboards will be available in a later phase."
+    "title": "Shared dashboard",
+    "unavailableTitle": "This link is not available",
+    "unavailableDescription": "The link is wrong, has been revoked or deactivated, or has expired. Ask the person who shared it for a new one.",
+    "readOnlyNotice": "Read-only shared dashboard. Data refreshes every 10 seconds."
   },
   "formStatus": {
     "draft": "Draft",
@@ -650,7 +726,8 @@
     "notCausation": "Possible relationship, not proof of causation.",
     "noSuggestions": "No notable relationships yet (needs at least 30 answers and a clear pattern).",
     "loadingSuggestions": "Looking for relationships…",
-    "viewerHint": "Filters are temporary and only change your view."
+    "viewerHint": "Filters are temporary and only change your view.",
+    "print": "Print / Save as PDF"
   },
   "live": {
     "live": "Live",
@@ -661,7 +738,8 @@
     "newResponses": "{count, plural, one {# new response} other {# new responses}}, apply",
     "lastResponse": "Last response {time}",
     "never": "No responses yet",
-    "secondsAgo": "{seconds, plural, one {# second ago} other {# seconds ago}}"
+    "secondsAgo": "{seconds, plural, one {# second ago} other {# seconds ago}}",
+    "polling": "Auto-refresh every 10 s"
   },
   "filters": {
     "label": "Filters",
@@ -825,7 +903,8 @@
     "respondents": "Respondents",
     "correlation": "Correlation",
     "emptyText": "Click Edit to write something here.",
-    "hour": "Hour"
+    "hour": "Hour",
+    "textHidden": "Free-text answers are hidden on this shared dashboard."
   },
   "addWidget": {
     "title": "Add widget",
@@ -932,5 +1011,76 @@
     "demo": "Demo",
     "seconds": "{value}s",
     "minutes": "{m} min {s} s"
+  },
+  "export": {
+    "button": "Export",
+    "hint": "Responses that match the current filters.",
+    "csv": "CSV (UTF-8)",
+    "xlsx": "Excel (XLSX)",
+    "other": "Other",
+    "columns": {
+      "responseId": "Response ID",
+      "submittedAtUtc": "Submitted at (UTC, ISO 8601)",
+      "submittedAtLocal": "Submitted at (Asia/Jakarta)",
+      "version": "Form version",
+      "identifierEmail": "Identifier (email)",
+      "identifierPhone": "Identifier (phone)"
+    },
+    "sheets": {
+      "responses": "Responses",
+      "summary": "Summary"
+    },
+    "summary": {
+      "question": "Question",
+      "type": "Type",
+      "answered": "Answered",
+      "value": "Value",
+      "count": "Count",
+      "percent": "% of answered",
+      "total": "Responses",
+      "mean": "Mean",
+      "median": "Median",
+      "min": "Minimum",
+      "max": "Maximum",
+      "averageLength": "Average length (characters)"
+    }
+  },
+  "share": {
+    "button": "Share",
+    "title": "Public dashboard links",
+    "description": "Anyone with a link can view this dashboard without signing in. It is read-only, refreshes every 10 seconds and never shows identifiers.",
+    "newLink": "New link",
+    "validUntil": "Valid until",
+    "includeText": "Include free-text answers",
+    "create": "Create link",
+    "privacy": "Free-text answers can contain personal details; leave them off unless the audience may read them.",
+    "existing": "Existing links",
+    "loading": "Loading links…",
+    "empty": "No links yet.",
+    "url": "Dashboard link",
+    "copy": "Copy link",
+    "copied": "Link copied.",
+    "open": "Open link",
+    "active": "Active",
+    "createdAt": "Created {date}",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "expired": "Expired"
+    },
+    "regenerate": "Regenerate",
+    "regenerateTitle": "Regenerate this link?",
+    "regenerateDescription": "The current URL stops working immediately. Share the new one instead.",
+    "regenerated": "New link created. The old URL no longer works.",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke this link?",
+    "revokeDescription": "The link is deleted and stops working immediately.",
+    "created": "Link created.",
+    "revoked": "Link revoked.",
+    "errors": {
+      "notAllowed": "You cannot manage links for this dashboard.",
+      "invalidInput": "Check the values and try again.",
+      "generic": "Something went wrong. Try again."
+    }
   }
 }

@@ -177,13 +177,19 @@
         "name": "Umpan Balik Karyawan",
         "description": "Kepuasan dan saran secara anonim."
       }
-    }
+    },
+    "showDemo": "Tampilkan formulir demo",
+    "demoBadge": "Demo"
   },
   "errors": {
     "forbiddenTitle": "Akses ditolak",
     "forbiddenDescription": "Anda tidak memiliki izin untuk melihat halaman ini.",
     "notFoundTitle": "Halaman tidak ditemukan",
-    "notFoundDescription": "Halaman yang Anda cari tidak ada."
+    "notFoundDescription": "Halaman yang Anda cari tidak ada.",
+    "boundaryTitle": "Terjadi kesalahan",
+    "boundaryDescription": "Bagian halaman ini gagal dimuat. Coba lagi; jika terus gagal, hubungi administrator.",
+    "retry": "Coba lagi",
+    "reference": "Referensi: {digest}"
   },
   "adminUsers": {
     "title": "Pengguna",
@@ -231,7 +237,75 @@
   "demo": {
     "title": "Alat demo",
     "subtitle": "Buat data demo untuk menguji dasbor dalam skala besar.",
-    "disabled": "Alat demo dinonaktifkan. Setel ENABLE_DEMO_TOOLS=true untuk mengaktifkannya."
+    "disabled": "Alat demo dinonaktifkan. Atur ENABLE_DEMO_TOOLS=true untuk mengaktifkannya.",
+    "disabledTitle": "Alat demo nonaktif",
+    "banner": {
+      "title": "Data demo",
+      "description": "Semua yang ada di halaman ini adalah data sintetis (is_demo = true) di formulir \"Scale test (Demo)\". Formulir demo disembunyikan dari daftar formulir kecuali \"Tampilkan formulir demo\" aktif."
+    },
+    "setup": {
+      "title": "Belum ada formulir demo",
+      "description": "Buat formulir \"Scale test (Demo)\" untuk membuat data dan memantau dasbornya.",
+      "button": "Buat formulir demo"
+    },
+    "generate": {
+      "title": "Buat respons",
+      "description": "Disisipkan oleh generate_demo_responses() di dalam database, 500 per panggilan.",
+      "count": "Jumlah respons yang ditambahkan",
+      "spread": "Tersebar selama",
+      "days": "{days} hari",
+      "button": "Buat"
+    },
+    "cancel": "Batal",
+    "generated": "{count, plural, other {# respons}} ditambahkan dalam {seconds} dtk.",
+    "cleared": "{count, plural, other {# respons demo}} dihapus.",
+    "currentTotal": "Total saat ini",
+    "simulator": {
+      "title": "Simulator langsung",
+      "description": "Mengirim respons tiap detik agar Anda bisa melihat dasbor diperbarui.",
+      "rate": "Laju",
+      "perSecond": "{rate}/dtk",
+      "start": "Mulai",
+      "stop": "Berhenti",
+      "sent": "{count, plural, other {# respons terkirim}}",
+      "tick": "panggilan terakhir {ms} md",
+      "tabNote": "Browser yang menjalankan simulasi (satu panggilan server per detik). Menutup atau memuat ulang tab ini menghentikannya."
+    },
+    "clear": {
+      "title": "Hapus data demo",
+      "description": "Hanya menghapus respons is_demo dari formulir demo, per 20.000.",
+      "button": "Hapus data demo",
+      "confirmTitle": "Hapus semua respons demo?",
+      "confirmDescription": "Respons asli tidak pernah disentuh. Tindakan ini tidak dapat dibatalkan."
+    },
+    "progress": {
+      "generating": "{done} dari {target} dibuat",
+      "clearing": "{done} dihapus",
+      "elapsed": "{seconds} dtk",
+      "finished": "Selesai dalam {seconds} dtk",
+      "label": "Progres"
+    },
+    "errors": {
+      "generic": "Aksi demo gagal. Periksa log server lalu coba lagi."
+    },
+    "performance": {
+      "title": "Performa",
+      "description": "Panggilan dasbor sungguhan, {window} terakhir per jenis. Waktu dalam md.",
+      "total": "Respons",
+      "server": "Server (API → DB)",
+      "roundTrip": "Pulang-pergi",
+      "p50p95": "p50 / p95 (n = {n})",
+      "payload": "Ukuran data",
+      "noCalls": "Belum ada panggilan.",
+      "render": "Render dasbor",
+      "last": "Terakhir",
+      "legend": "Hijau: sesuai target (dashboard_bundle 400 md, render 100 md). Kuning: hingga 1 dtk (render 300 md). Merah: lebih lambat.",
+      "level": {
+        "good": "sesuai target",
+        "ok": "mendekati target",
+        "bad": "melebihi target"
+      }
+    }
   },
   "publicForm": {
     "title": "Formulir",
@@ -292,8 +366,10 @@
     }
   },
   "publicDashboard": {
-    "title": "Dasbor",
-    "placeholder": "Dasbor yang dibagikan akan tersedia di fase berikutnya."
+    "title": "Dasbor bersama",
+    "unavailableTitle": "Tautan ini tidak tersedia",
+    "unavailableDescription": "Tautan salah, sudah dicabut atau dinonaktifkan, atau sudah kedaluwarsa. Minta tautan baru kepada orang yang membagikannya.",
+    "readOnlyNotice": "Dasbor bersama hanya-baca. Data diperbarui tiap 10 detik."
   },
   "formStatus": {
     "draft": "Draf",
@@ -650,7 +726,8 @@
     "notCausation": "Kemungkinan hubungan, bukan bukti sebab-akibat.",
     "noSuggestions": "Belum ada hubungan yang menonjol (perlu minimal 30 jawaban dan pola yang jelas).",
     "loadingSuggestions": "Mencari hubungan…",
-    "viewerHint": "Filter bersifat sementara dan hanya mengubah tampilan Anda."
+    "viewerHint": "Filter bersifat sementara dan hanya mengubah tampilan Anda.",
+    "print": "Cetak / Simpan PDF"
   },
   "live": {
     "live": "Langsung",
@@ -661,7 +738,8 @@
     "newResponses": "{count} jawaban baru, terapkan",
     "lastResponse": "Jawaban terakhir {time}",
     "never": "Belum ada jawaban",
-    "secondsAgo": "{seconds} detik lalu"
+    "secondsAgo": "{seconds} detik lalu",
+    "polling": "Muat ulang otomatis tiap 10 dtk"
   },
   "filters": {
     "label": "Filter",
@@ -825,7 +903,8 @@
     "respondents": "Responden",
     "correlation": "Korelasi",
     "emptyText": "Klik Ubah untuk menulis sesuatu di sini.",
-    "hour": "Jam"
+    "hour": "Jam",
+    "textHidden": "Jawaban teks bebas disembunyikan di dasbor bersama ini."
   },
   "addWidget": {
     "title": "Tambah widget",
@@ -932,5 +1011,76 @@
     "demo": "Demo",
     "seconds": "{value} dtk",
     "minutes": "{m} mnt {s} dtk"
+  },
+  "export": {
+    "button": "Ekspor",
+    "hint": "Respons yang cocok dengan filter saat ini.",
+    "csv": "CSV (UTF-8)",
+    "xlsx": "Excel (XLSX)",
+    "other": "Lainnya",
+    "columns": {
+      "responseId": "ID respons",
+      "submittedAtUtc": "Dikirim pada (UTC, ISO 8601)",
+      "submittedAtLocal": "Dikirim pada (Asia/Jakarta)",
+      "version": "Versi formulir",
+      "identifierEmail": "Identitas (email)",
+      "identifierPhone": "Identitas (telepon)"
+    },
+    "sheets": {
+      "responses": "Respons",
+      "summary": "Ringkasan"
+    },
+    "summary": {
+      "question": "Pertanyaan",
+      "type": "Jenis",
+      "answered": "Dijawab",
+      "value": "Nilai",
+      "count": "Jumlah",
+      "percent": "% dari yang menjawab",
+      "total": "Respons",
+      "mean": "Rata-rata",
+      "median": "Median",
+      "min": "Minimum",
+      "max": "Maksimum",
+      "averageLength": "Rata-rata panjang (karakter)"
+    }
+  },
+  "share": {
+    "button": "Bagikan",
+    "title": "Tautan dasbor publik",
+    "description": "Siapa pun yang memiliki tautan dapat melihat dasbor ini tanpa masuk. Hanya-baca, diperbarui tiap 10 detik, dan tidak pernah menampilkan identitas.",
+    "newLink": "Tautan baru",
+    "validUntil": "Berlaku sampai",
+    "includeText": "Sertakan jawaban teks bebas",
+    "create": "Buat tautan",
+    "privacy": "Jawaban teks bebas bisa berisi data pribadi; biarkan nonaktif kecuali penerima boleh membacanya.",
+    "existing": "Tautan yang ada",
+    "loading": "Memuat tautan…",
+    "empty": "Belum ada tautan.",
+    "url": "Tautan dasbor",
+    "copy": "Salin tautan",
+    "copied": "Tautan disalin.",
+    "open": "Buka tautan",
+    "active": "Aktif",
+    "createdAt": "Dibuat {date}",
+    "status": {
+      "active": "Aktif",
+      "inactive": "Nonaktif",
+      "expired": "Kedaluwarsa"
+    },
+    "regenerate": "Buat ulang",
+    "regenerateTitle": "Buat ulang tautan ini?",
+    "regenerateDescription": "URL saat ini langsung berhenti berfungsi. Bagikan URL yang baru.",
+    "regenerated": "Tautan baru dibuat. URL lama tidak berfungsi lagi.",
+    "revoke": "Cabut",
+    "revokeTitle": "Cabut tautan ini?",
+    "revokeDescription": "Tautan dihapus dan langsung berhenti berfungsi.",
+    "created": "Tautan dibuat.",
+    "revoked": "Tautan dicabut.",
+    "errors": {
+      "notAllowed": "Anda tidak dapat mengelola tautan dasbor ini.",
+      "invalidInput": "Periksa nilainya lalu coba lagi.",
+      "generic": "Terjadi kesalahan. Coba lagi."
+    }
   }
 }

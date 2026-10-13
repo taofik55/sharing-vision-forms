@@ -11,6 +11,8 @@ flowchart LR
   R -->|user session, RLS applies| DB[(Postgres)]
   R -->|admin client, after explicit authz| DB
   Resp[Respondent] --> API["/api/f/... Route Handlers"] -->|validate + admin client RPC| DB
+  Anon[Share-link viewer] --> D["/api/d/{token}/stats"] -->|token -> form, whitelisted RPC| DB
+  B --> E["/api/forms/{id}/export"] -->|user session, keyset batches| DB
 ```
 
 - `proxy.ts` is a UX gate only. Every page calls `requireUser()` / `requireRole()` (`src/lib/auth/session.ts`), every server action re-checks the caller, and RLS is the final authority.
@@ -134,19 +136,20 @@ All are `SECURITY DEFINER`, `STABLE`, `search_path = ''`, executable by `authent
 
 RLS is enabled on every table. Policies target `authenticated`; `anon` has no grants at all. `TRUNCATE` is revoked.
 
-| Table            | SELECT                            | INSERT                                               | UPDATE                                                 | DELETE                     |
-| ---------------- | --------------------------------- | ---------------------------------------------------- | ------------------------------------------------------ | -------------------------- |
-| workspaces       | own workspace                     | —                                                    | —                                                      | —                          |
-| profiles         | own row; admin: whole workspace   | — (auth trigger)                                     | own row (`full_name`, `locale` only); admin: workspace | —                          |
-| forms            | owner (active) or `can_view_form` | admin/editor, `owner_id = auth.uid()`, own workspace | `can_edit_form` (owner/workspace change: admin only)   | admin or owner             |
-| form_versions    | `can_view_form`                   | — (`publish_form` RPC only)                          | — (immutable trigger)                                  | — (only cascade with form) |
-| form_members     | `can_view_form`                   | `can_edit_form` and (admin or owner)                 | same                                                   | same                       |
-| responses        | `can_view_form`                   | —                                                    | —                                                      | admin or owner             |
-| response_answers | `can_view_form`                   | —                                                    | —                                                      | admin or owner             |
-| dashboards       | `can_view_form`                   | `can_edit_form`                                      | `can_edit_form`                                        | —                          |
-| dashboard_shares | `can_edit_form`                   | `can_edit_form`                                      | `can_edit_form`                                        | `can_edit_form`            |
-| response_drafts  | —                                 | —                                                    | —                                                      | —                          |
-| rate_limits      | —                                 | —                                                    | —                                                      | —                          |
+| Table                            | SELECT                                                                                   | INSERT                                               | UPDATE                                                 | DELETE                     |
+| -------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------ | -------------------------- |
+| workspaces                       | own workspace                                                                            | —                                                    | —                                                      | —                          |
+| profiles                         | own row; admin: whole workspace                                                          | — (auth trigger)                                     | own row (`full_name`, `locale` only); admin: workspace | —                          |
+| forms                            | owner (active) or `can_view_form`                                                        | admin/editor, `owner_id = auth.uid()`, own workspace | `can_edit_form` (owner/workspace change: admin only)   | admin or owner             |
+| form_versions                    | `can_view_form`                                                                          | — (`publish_form` RPC only)                          | — (immutable trigger)                                  | — (only cascade with form) |
+| form_members                     | `can_view_form`                                                                          | `can_edit_form` and (admin or owner)                 | same                                                   | same                       |
+| responses                        | `can_view_form`                                                                          | —                                                    | —                                                      | admin or owner             |
+| response_answers                 | `can_view_form` (no table grant to `authenticated` since Phase 5: reads go through RPCs) | —                                                    | —                                                      | admin or owner             |
+| dashboards                       | `can_view_form`                                                                          | `can_edit_form`                                      | `can_edit_form`                                        | —                          |
+| dashboard_shares                 | `can_edit_form`                                                                          | `can_edit_form`                                      | `can_edit_form`                                        | `can_edit_form`            |
+| response_drafts                  | —                                                                                        | —                                                    | —                                                      | —                          |
+| rate_limits                      | —                                                                                        | —                                                    | —                                                      | —                          |
+| response_summary, answer_summary | — (no grants; trigger-maintained, read by SECURITY DEFINER RPCs)                         | —                                                    | —                                                      | —                          |
 
 Triggers:
 
@@ -234,7 +237,7 @@ Filters (jsonb): `{ from, to, versionIds?, answers: [{ questionKey, operator: "a
 
 ### Query design and performance
 
-`_dashboard_responses(form_id, filters)` yields the filtered response set (uses `responses (form_id, submitted_at)` for date ranges; answer filters are `NOT EXISTS` probes on `response_answers (response_id)`). `_bundle_questions` then reads the form's answers once (directly when there are no row filters, otherwise semi-joined to that set), computes counts / averages / quantiles in one hash + ordered-set aggregate pass, and options, pairs, distributions, histograms, dates and terms in a few typed passes, all grouped by `question_key`. Per-question JSON is assembled from those maps. The function runs with `work_mem = 32MB` so the ~100k-row working set and its sorts stay in memory.
+`_dashboard_responses(form_id, filters)` yields the filtered response set (uses `responses (form_id, submitted_at)` for date ranges; answer filters were `NOT EXISTS` probes on `response_answers (response_id)`, set-based since Phase 5). `_bundle_questions` then reads the form's answers once (directly when there are no row filters, otherwise semi-joined to that set), computes counts / averages / quantiles in one hash + ordered-set aggregate pass, and options, pairs, distributions, histograms, dates and terms in a few typed passes, all grouped by `question_key`. Per-question JSON is assembled from those maps. The function runs with `work_mem = 32MB` so the ~100k-row working set and its sorts stay in memory.
 
 Measured locally (Supabase local stack on Docker Desktop for Windows, warm connection, 10 000 responses / 107 384 answers, 14 questions):
 
@@ -264,6 +267,85 @@ Index review: existing indexes cover the access paths (`responses (form_id, subm
 - Realtime: one channel per open dashboard, joined with the user's JWT (`realtime.setAuth`), INSERT filtered by `form_id`, DELETE unfiltered. Inserts bump the cached total immediately and schedule an invalidation (1.5 s trailing, 5 s max wait). Channel errors switch the bundle query to 10 s polling.
 - Dashboard config: `dashboards.config` (zod `dashboardConfigSchema`, `configVersion: 1`), merged with the current definition on every load (`mergeDashboardConfig`), saved 800 ms after the last change through `saveDashboardAction` (RLS: `can_edit_form`).
 
+## Scale, export and public links (Phase 5)
+
+Migration: `supabase/migrations/20261017090000_phase5_scale_export.sql`. Measurements: [scale-report.md](scale-report.md).
+
+### Dashboard summaries
+
+Two tables hold pre-aggregated data, maintained by triggers; nobody but `SECURITY DEFINER` functions can read or write them (RLS on, no policies, no grants to `anon` / `authenticated`).
+
+| Table              | Grain                                                                    | Columns                                                                                             |
+| ------------------ | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `response_summary` | form × UTC hour × version × device × language                            | `cnt`, `dur_n`, `dur_sum`, `first_at`, `last_at`                                                    |
+| `answer_summary`   | form × Asia/Jakarta day × question × version × device × language × value | `kind` (`a` answered, `o` option, `p` checkbox pair, `v` number, `d` date), `value`, `cnt`, `total` |
+
+```mermaid
+flowchart LR
+  I["INSERT responses / response_answers"] -->|statement trigger, transition table, per-form advisory lock| U[upsert summary rows]
+  D["DELETE responses"] -->|statement trigger| R["rebuild touched (form, Jakarta day) slices from raw rows"]
+  Q["dashboard_bundle / question_stats"] --> C{filters}
+  C -->|none, date range on day/hour boundaries, versions, device, language| S[summary path]
+  C -->|answer filters or unaligned dates| W[raw path]
+```
+
+- Inserts are incremental: the trigger aggregates only the rows of the statement (`new_rows`) with the same SQL text as the rebuild (`_answer_summary_sql()`), so both can never drift. An advisory lock per form serializes concurrent submissions on the same summary rows (no deadlocks).
+- Deletes (admin / owner deleting a response, demo cleanup, form deletion) rebuild the affected Jakarta days from the remaining raw rows: the answers are already gone through the cascade when the statement trigger runs, so a decrement is impossible. `rebuild_dashboard_summary(form_id)` (secret key) rebuilds a whole form.
+- Read paths: the summary path computes every statistic from value counts (weighted `percentile_cont`, the same numeric formulas as `avg` / `stddev_samp`). The median duration and the top terms still read raw rows (one indexed scan / at most 2,000 answers per question). The raw path is the Phase 4 code. `tests/integration/scale.test.ts` checks that both return identical JSON.
+- `cross_suggestions` uses the latest 5,000 matching responses (a hint, cached 5 minutes). `cross_stats` stays exact on the raw rows.
+- `_dashboard_responses` resolves answer filters set-based (one indexed read of each filtered question, intersected) instead of a probe per response; `list_responses` no longer materializes an id array.
+
+### Export
+
+`GET /api/forms/:id/export?format=csv|xlsx&ui=<locale>&<dashboard filters>` (signed-in, RLS checks the form).
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant R as Route handler
+  participant DB as Postgres
+  B->>R: GET export (session cookie)
+  R->>DB: forms (RLS), can_edit_form, versions
+  loop keyset batches of 1000 (submitted_at, id)
+    R->>DB: export_responses(form, filters, after, 1000)
+    DB-->>R: rows (identifiers only for editors, email/phone answers masked for viewers)
+    R-->>B: CSV lines / XLSX rows (streamed)
+  end
+  R->>DB: dashboard_bundle (XLSX "Summary" sheet)
+```
+
+- Only one batch is in memory. CSV is a pull-based `ReadableStream` (UTF-8 BOM, RFC 4180, CRLF). XLSX uses the exceljs streaming writer; because exceljs ignores backpressure, the writer pauses between batches while more than 2 MB wait unread (`src/lib/export/stream.ts`).
+- Columns: response id, submitted at (UTC ISO 8601 and Asia/Jakarta), version, identifier columns (editors only), then one column per question (latest title, short key appended on collisions, current order first, removed questions last). Choice answers use option labels, checkboxes are joined with `; `.
+- Formula injection: text cells starting with `=`, `+`, `-`, `@`, tab or CR get a leading `'`.
+
+### Public dashboard links
+
+```mermaid
+flowchart LR
+  V[Anonymous viewer] --> P["/{locale}/d/{token} page"]
+  V --> A["/api/d/{token}/stats?fn=..."]
+  P & A --> T{resolveShare: active, not expired, form published}
+  T -->|no| N[404 / "link not available"]
+  T -->|yes| X["admin client, whitelisted RPC, form id from the share, date range only"]
+```
+
+- Tokens: 32 random bytes, base64url (43 characters), generated in Node; regenerate replaces the token, revoke deletes the row. Share rows are managed through server actions as the signed-in user, so RLS (`can_edit_form`) decides who may create or change them.
+- The API accepts `fn = bundle | suggestions | cross | text` plus `from` / `to`; the form id never comes from the request. `text` requires `include_text_answers`; without it, text statistics are stripped (`terms`, average length). The bundle's `creator` is removed. Identifiers are never part of these RPCs.
+- Rate limit: 600 requests per 10 minutes per IP and token (`check_rate_limit`, salted IP hash). Responses carry `Cache-Control: no-store` and `X-Robots-Tag: noindex`; the page sets `robots: noindex, nofollow`.
+- The page renders the same `DashboardView` in `mode="public"`: data source = the share API, 10 s polling (anonymous users cannot use Realtime), date filter only, no drill-down, no editing, export or share controls.
+
+### Dashboard data sources and modes
+
+`DashboardView` takes a `DataSource` (`call(fn, args)`): Supabase as the user (app), the share API (public) or `/api/demo/rpc` (scale page, which also reports server time). Modes: `app` (Realtime, URL filters, editing, share, export, print), `public`, `preview` (scale page: Realtime off during bulk jobs). Realtime INSERT events are buffered and applied at most every 250 ms, so counters re-render at most 4 times per second at any insert rate; charts refetch after 1.5 s of quiet, at most every 5 s.
+
+### Demo tools
+
+`/[locale]/admin/demo/scale`: admin role (layout) **and** `ENABLE_DEMO_TOOLS=true`; every server action and `/api/demo/rpc` re-check both and that the target form has `is_demo = true`. The browser drives long jobs as short calls (PostgREST stops statements after 8 s): generation 1,000 responses per call, cleanup 20,000 per call (oldest first), simulator one call per second (`generate_demo_responses(..., p_live => true)`). Demo forms are hidden from `list_forms` unless `p_include_demo`.
+
+### Security headers
+
+`next.config.ts`: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, HSTS on every path; `X-Frame-Options: DENY` and `frame-ancestors 'none'` on everything except public forms (`/{locale}/f/...`, embeddable). `poweredByHeader: false`. `pnpm check:secrets` scans a production build for server secrets.
+
 ## Form definition and versions
 
 - `src/lib/forms/schema.ts` holds the only Zod schema of a form definition (builder, renderer, server validation, analytics).
@@ -274,24 +356,30 @@ Index review: existing indexes cover the access paths (`responses (form_id, subm
 
 ## Code map
 
-| Concern                                          | Location                                                            |
-| ------------------------------------------------ | ------------------------------------------------------------------- |
-| Session refresh, auth redirect, locale routing   | `src/proxy.ts`                                                      |
-| Current user, `requireUser`, `requireRole`       | `src/lib/auth/session.ts`                                           |
-| Role helpers and navigation                      | `src/lib/auth/roles.ts`                                             |
-| Supabase clients                                 | `src/lib/supabase/{client,server,admin}.ts`                         |
-| i18n config                                      | `src/lib/i18n/`, `messages/`                                        |
-| 403 page                                         | `src/app/[locale]/(app)/forbidden.tsx`                              |
-| Admin users                                      | `src/app/[locale]/(app)/admin/users/`                               |
-| Schema                                           | `supabase/migrations/`                                              |
-| Form definition schema, logic, answer validation | `src/lib/forms/{schema,logic,validation}.ts`                        |
-| Builder operations, templates, hashing           | `src/lib/forms/{operations,templates,hash}.ts`                      |
-| Form server actions, access helper               | `src/lib/forms/{actions,access}.ts`                                 |
-| Builder UI                                       | `src/components/builder/`                                           |
-| Form renderer (preview now, live in Phase 3)     | `src/components/renderer/`                                          |
-| Forms list, settings, sharing, public link       | `src/components/forms/`                                             |
-| Dashboard RPCs, demo generator                   | `supabase/migrations/*phase4*`, `*dashboard*`, `*bundle_questions*` |
-| Auto dashboard, config, merge, filters, insights | `src/lib/analytics/`                                                |
-| Dashboard UI, charts, live updates               | `src/components/dashboard/`, `src/components/charts/`               |
-| Responses tab                                    | `src/components/responses/`                                         |
-| Demo data script                                 | `scripts/seed-demo.ts`                                              |
+| Concern                                                | Location                                                                                                             |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Session refresh, auth redirect, locale routing         | `src/proxy.ts`                                                                                                       |
+| Current user, `requireUser`, `requireRole`             | `src/lib/auth/session.ts`                                                                                            |
+| Role helpers and navigation                            | `src/lib/auth/roles.ts`                                                                                              |
+| Supabase clients                                       | `src/lib/supabase/{client,server,admin}.ts`                                                                          |
+| i18n config                                            | `src/lib/i18n/`, `messages/`                                                                                         |
+| 403 page                                               | `src/app/[locale]/(app)/forbidden.tsx`                                                                               |
+| Admin users                                            | `src/app/[locale]/(app)/admin/users/`                                                                                |
+| Schema                                                 | `supabase/migrations/`                                                                                               |
+| Form definition schema, logic, answer validation       | `src/lib/forms/{schema,logic,validation}.ts`                                                                         |
+| Builder operations, templates, hashing                 | `src/lib/forms/{operations,templates,hash}.ts`                                                                       |
+| Form server actions, access helper                     | `src/lib/forms/{actions,access}.ts`                                                                                  |
+| Builder UI                                             | `src/components/builder/`                                                                                            |
+| Form renderer (preview now, live in Phase 3)           | `src/components/renderer/`                                                                                           |
+| Forms list, settings, sharing, public link             | `src/components/forms/`                                                                                              |
+| Dashboard RPCs, demo generator                         | `supabase/migrations/*phase4*`, `*dashboard*`, `*bundle_questions*`                                                  |
+| Auto dashboard, config, merge, filters, insights       | `src/lib/analytics/`                                                                                                 |
+| Dashboard UI, charts, live updates                     | `src/components/dashboard/`, `src/components/charts/`                                                                |
+| Responses tab                                          | `src/components/responses/`                                                                                          |
+| Demo data script                                       | `scripts/seed-demo.ts`                                                                                               |
+| Summaries, export RPC, share-safe RPCs, demo tools SQL | `supabase/migrations/20261017090000_phase5_scale_export.sql`                                                         |
+| Export (CSV / XLSX)                                    | `src/lib/export/`, `src/app/api/forms/[id]/export/route.ts`                                                          |
+| Share links (actions, token resolution, public API)    | `src/lib/shares/`, `src/app/api/d/[token]/stats/route.ts`, `src/app/[locale]/d/[token]/`                             |
+| Share dialog, export menu, print                       | `src/components/dashboard/{share-dialog,export-menu,dashboard-grid}.tsx`                                             |
+| Scale page, demo actions, timed RPC API                | `src/app/[locale]/(app)/admin/demo/scale/`, `src/components/demo/`, `src/lib/demo/`, `src/app/api/demo/rpc/route.ts` |
+| Benchmark, secret scan                                 | `scripts/bench-dashboard.ts`, `scripts/check-client-secrets.mjs`                                                     |
