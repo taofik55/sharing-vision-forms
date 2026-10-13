@@ -26,8 +26,13 @@ export async function generateMetadata({
   if (!hasLocale(routing.locales, locale)) return {};
   const t = await getTranslations({ locale, namespace: "metadata" });
   return {
+    // Absolute URLs for the Open Graph image (src/app/opengraph-image.png).
+    metadataBase: new URL(
+      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+    ),
     title: { default: t("title"), template: `%s · ${t("title")}` },
     description: t("description"),
+    applicationName: t("title"),
   };
 }
 

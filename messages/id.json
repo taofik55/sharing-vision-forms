@@ -1,17 +1,18 @@
 {
   "metadata": {
-    "title": "FormPulse",
-    "description": "Formulir dinamis dengan dasbor langsung"
+    "title": "Sharing Vision Form App",
+    "description": "Sharing Vision Form App: formulir dinamis dengan dasbor langsung"
   },
   "common": {
-    "appName": "FormPulse",
+    "appName": "Sharing Vision Form App",
     "loading": "Memuat…",
     "save": "Simpan",
     "cancel": "Batal",
     "close": "Tutup",
     "backHome": "Kembali ke beranda",
     "comingSoon": "Hadir di fase berikutnya",
-    "unexpectedError": "Terjadi kesalahan. Silakan coba lagi."
+    "unexpectedError": "Terjadi kesalahan. Silakan coba lagi.",
+    "productName": "Form App"
   },
   "nav": {
     "label": "Navigasi utama",
@@ -44,7 +45,7 @@
     "viewer": "Peninjau"
   },
   "auth": {
-    "loginTitle": "Masuk ke FormPulse",
+    "loginTitle": "Masuk ke SV Form App",
     "loginDescription": "Gunakan akun yang diberikan oleh administrator Anda.",
     "email": "Email",
     "password": "Kata sandi",
@@ -193,7 +194,7 @@
   },
   "adminUsers": {
     "title": "Pengguna",
-    "subtitle": "Atur siapa yang dapat mengakses FormPulse dan apa yang dapat mereka lakukan.",
+    "subtitle": "Atur siapa yang dapat mengakses Sharing Vision Form App dan apa yang dapat mereka lakukan.",
     "createUser": "Buat pengguna",
     "createTitle": "Buat pengguna",
     "createDescription": "Pengguna dapat langsung masuk dengan kata sandi ini.",

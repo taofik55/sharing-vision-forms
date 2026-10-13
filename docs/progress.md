@@ -385,3 +385,10 @@ Status: **done** (2026-10-13)
 - [ ] Set `ENABLE_DEMO_TOOLS=false`, restart: the demo page says tools are off and its actions return "not allowed".
 - [ ] `pnpm build && pnpm check:secrets` passes; `curl -I http://localhost:3000/id/login` shows the security headers; `/id/f/<slug>` has no `X-Frame-Options`.
 - [ ] 360 px wide (DevTools): login, public form, forms list, dashboard without horizontal scrolling.
+
+### Follow-up (2026-10-13): branding and theme script warning
+
+- Product name is now **Sharing Vision Form App** (`metadata.title`, `common.appName`, login title, admin subtitle; `common.productName` = "Form App" under the wordmark). Code name, package name and dummy accounts stay `formpulse`.
+- Brand: `public/sharing-vision.svg` wordmark (`src/components/brand.tsx`) in the sidebar, mobile header and menu, login card and public pages (forms, shared dashboards). Brand colours taken from the logo: red `#CF2A22`, orange `#F7A350`.
+- New icons (Next.js file conventions, all derived from one vector "sv." monogram): `src/app/icon.svg`, `src/app/favicon.ico` (16/32/48), `src/app/apple-icon.png` (180, full bleed), `src/app/opengraph-image.png` (1200x630, + alt text) with `metadataBase` from `NEXT_PUBLIC_SITE_URL`.
+- Fixed the dev console error "Encountered a script tag while rendering React component" when switching language: switching remounts the `[locale]` layout, so next-themes rendered its inline script on the client. On the client the script is now an inert `application/json` block (it only has to run from the server HTML; next-themes already suppresses the hydration attribute difference). `navigation.spec.ts` now switches id -> en -> id and fails on any console error.

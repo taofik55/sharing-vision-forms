@@ -62,7 +62,7 @@ export function PublicLink({ url, qrSvg, closed }: PublicLinkProps) {
             </a>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <a href={qrHref} download="formpulse-qr.svg">
+            <a href={qrHref} download="sharing-vision-form-qr.svg">
               <Download aria-hidden />
               {t("downloadQr")}
             </a>

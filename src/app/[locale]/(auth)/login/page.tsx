@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Brand } from "@/components/brand";
 import {
   Card,
   CardContent,
@@ -25,6 +26,7 @@ export default async function LoginPage({
   setRequestLocale(locale as Locale);
   const query = await searchParams;
   const t = await getTranslations("auth");
+  const tc = await getTranslations("common");
 
   const next = safeNextPath(
     typeof query.next === "string" ? query.next : undefined,
@@ -35,6 +37,12 @@ export default async function LoginPage({
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
+        <Brand
+          appName={tc("appName")}
+          productName={tc("productName")}
+          size="lg"
+          className="mb-3"
+        />
         <CardTitle className="text-xl">{t("loginTitle")}</CardTitle>
         <CardDescription>{t("loginDescription")}</CardDescription>
       </CardHeader>

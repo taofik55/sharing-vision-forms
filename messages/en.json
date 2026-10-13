@@ -1,17 +1,18 @@
 {
   "metadata": {
-    "title": "FormPulse",
-    "description": "Dynamic forms with live dashboards"
+    "title": "Sharing Vision Form App",
+    "description": "Sharing Vision Form App: dynamic forms with live dashboards"
   },
   "common": {
-    "appName": "FormPulse",
+    "appName": "Sharing Vision Form App",
     "loading": "Loading…",
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close",
     "backHome": "Back to home",
     "comingSoon": "Coming in a later phase",
-    "unexpectedError": "Something went wrong. Please try again."
+    "unexpectedError": "Something went wrong. Please try again.",
+    "productName": "Form App"
   },
   "nav": {
     "label": "Main navigation",
@@ -44,7 +45,7 @@
     "viewer": "Viewer"
   },
   "auth": {
-    "loginTitle": "Sign in to FormPulse",
+    "loginTitle": "Sign in to SV Form App",
     "loginDescription": "Use the account provided by your administrator.",
     "email": "Email",
     "password": "Password",
@@ -193,7 +194,7 @@
   },
   "adminUsers": {
     "title": "Users",
-    "subtitle": "Manage who can access FormPulse and what they can do.",
+    "subtitle": "Manage who can access Sharing Vision Form App and what they can do.",
     "createUser": "Create user",
     "createTitle": "Create user",
     "createDescription": "The user can sign in immediately with this password.",

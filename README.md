@@ -1,4 +1,6 @@
-# FormPulse
+# Sharing Vision Form App
+
+Internal code name: FormPulse (used in identifiers such as the dummy `@formpulse.test` accounts).
 
 Dynamic forms with live, editable dashboards. Respondents fill public forms without an account; internal users (admin, editor, viewer) build forms, read live dashboards, export responses and share read-only dashboard links.
 

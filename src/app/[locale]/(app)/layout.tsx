@@ -1,4 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Brand } from "@/components/brand";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { RoleBadge } from "@/components/layout/role-badge";
@@ -24,11 +25,8 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-svh">
       <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col gap-6 border-r border-sidebar-border bg-sidebar p-4 text-sidebar-foreground md:flex print:hidden">
-        <Link
-          href="/"
-          className="px-3 py-1 text-lg font-semibold tracking-tight"
-        >
-          {t("appName")}
+        <Link href="/" className="rounded-md px-3 py-1">
+          <Brand appName={t("appName")} productName={t("productName")} />
         </Link>
         <SidebarNav items={navItems} />
       </aside>
@@ -36,7 +34,13 @@ export default async function AppLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70 md:px-6 print:hidden">
           <MobileNav items={navItems} />
-          <span className="font-semibold md:hidden">{t("appName")}</span>
+          <Link href="/" className="md:hidden">
+            <Brand
+              appName={t("appName")}
+              productName={t("productName")}
+              size="sm"
+            />
+          </Link>
           <div className="ml-auto flex items-center gap-1">
             <RoleBadge role={user.role} />
             <LanguageSwitcher />

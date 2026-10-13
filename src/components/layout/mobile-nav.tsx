@@ -3,6 +3,7 @@
 import { Menu } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -32,7 +33,12 @@ export function MobileNav({ items }: { items: NavItem[] }) {
       </SheetTrigger>
       <SheetContent side="left" className="w-72 bg-sidebar p-4">
         <SheetHeader className="px-0">
-          <SheetTitle>{t("common.appName")}</SheetTitle>
+          <SheetTitle>
+            <Brand
+              appName={t("common.appName")}
+              productName={t("common.productName")}
+            />
+          </SheetTitle>
         </SheetHeader>
         <SidebarNav items={items} onNavigate={() => setOpen(false)} />
       </SheetContent>

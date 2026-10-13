@@ -1,6 +1,6 @@
 # Supabase setup
 
-Step-by-step configuration for FormPulse, matching what is in this repository. Two targets:
+Step-by-step configuration for Sharing Vision Form App (code name FormPulse), matching what is in this repository. Two targets:
 
 - **Local** (Docker): development, tests, benchmarks.
 - **Hosted** (supabase.com): staging and production.

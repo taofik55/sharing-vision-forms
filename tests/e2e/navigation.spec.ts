@@ -67,7 +67,14 @@ for (const account of ACCOUNTS) {
 }
 
 test("language switch keeps the current page", async ({ page }) => {
+  // Switching remounts the [locale] layout; nothing may log an error
+  // (regression: React warned about the theme script tag).
+  const errors: string[] = [];
+  page.on("console", (m) => {
+    if (m.type() === "error") errors.push(m.text());
+  });
   await login(page, "viewer@formpulse.test");
+  await expect(page).toHaveTitle(/Sharing Vision Form App/);
   await page.getByTestId("nav-forms").click();
   await expect(page).toHaveURL(/\/id\/forms$/, { timeout: 30_000 });
   await expect(
@@ -80,6 +87,14 @@ test("language switch keeps the current page", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: "Forms" }),
   ).toBeVisible();
+
+  await page.getByTestId("language-switcher").click();
+  await page.getByRole("menuitem", { name: "Bahasa Indonesia" }).click();
+  await expect(page).toHaveURL(/\/id\/forms$/, { timeout: 30_000 });
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Formulir" }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
 test("wrong password shows a friendly error", async ({ page }) => {
