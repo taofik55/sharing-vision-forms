@@ -14,6 +14,7 @@ const FUNCTIONS = [
   "cross_stats",
   "cross_suggestions",
   "question_text_answers",
+  "dashboard_query",
 ] as const;
 
 const body = z.object({

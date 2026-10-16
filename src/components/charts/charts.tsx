@@ -165,11 +165,14 @@ export const BarChart = memo(function BarChart({
   format = String,
   ariaLabel,
   valueSuffix = "",
+  showValues = true,
 }: BaseProps & {
   orientation?: "horizontal" | "vertical";
   valueSuffix?: string;
+  showValues?: boolean;
 }) {
   const horizontal = orientation === "horizontal";
+  const decimals = data.some((d) => !Number.isInteger(d.value));
   const longest = data.reduce((m, d) => Math.max(m, d.label.length), 0);
   const labelWidth = Math.min(180, Math.max(48, longest * 7));
   return (
@@ -194,7 +197,7 @@ export const BarChart = memo(function BarChart({
                 tick={AXIS_TICK}
                 axisLine={false}
                 tickLine={false}
-                allowDecimals={false}
+                allowDecimals={decimals}
               />
               <YAxis
                 type="category"
@@ -214,7 +217,12 @@ export const BarChart = memo(function BarChart({
                 tick={AXIS_TICK}
                 axisLine={{ stroke: "var(--chart-axis)" }}
                 tickLine={false}
-                interval={data.length > 12 ? "preserveStartEnd" : 0}
+                interval={
+                  // Every label only while they fit side by side.
+                  data.length > 12 || data.length * longest > 60
+                    ? "preserveStartEnd"
+                    : 0
+                }
                 minTickGap={4}
               />
               <YAxis
@@ -222,8 +230,8 @@ export const BarChart = memo(function BarChart({
                 tick={AXIS_TICK}
                 axisLine={false}
                 tickLine={false}
-                allowDecimals={false}
-                width={36}
+                allowDecimals={decimals}
+                width={40}
               />
             </>
           )}
@@ -242,12 +250,14 @@ export const BarChart = memo(function BarChart({
             {data.map((d, i) => (
               <Cell key={d.id} fill={colorAt(i, palette, data.length)} />
             ))}
-            <LabelList
-              dataKey="value"
-              position={horizontal ? "right" : "top"}
-              className="fill-muted-foreground text-xs tabular-nums"
-              formatter={(v: unknown) => `${format(Number(v))}${valueSuffix}`}
-            />
+            {showValues && (
+              <LabelList
+                dataKey="value"
+                position={horizontal ? "right" : "top"}
+                className="fill-muted-foreground text-xs tabular-nums"
+                formatter={(v: unknown) => `${format(Number(v))}${valueSuffix}`}
+              />
+            )}
           </Bar>
         </RBarChart>
       </ResponsiveContainer>
@@ -262,6 +272,7 @@ export const SeriesChart = memo(function SeriesChart({
   ariaLabel,
 }: Pick<BaseProps, "data" | "ariaLabel"> & { variant?: "area" | "line" }) {
   const Chart = variant === "area" ? AreaChart : RLineChart;
+  const decimals = data.some((d) => !Number.isInteger(d.value));
   return (
     <div className="h-full min-h-40 w-full" role="img" aria-label={ariaLabel}>
       <ResponsiveContainer width="100%" height="100%" minHeight={160}>
@@ -278,8 +289,8 @@ export const SeriesChart = memo(function SeriesChart({
             tick={AXIS_TICK}
             axisLine={false}
             tickLine={false}
-            allowDecimals={false}
-            width={36}
+            allowDecimals={decimals}
+            width={40}
           />
           <Tooltip
             content={TooltipBox}

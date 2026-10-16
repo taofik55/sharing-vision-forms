@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 import { createContext, useContext, useMemo } from "react";
+import type { ChartSpec } from "@/lib/analytics/chart-spec";
 import type { Widget } from "@/lib/analytics/config";
 import type { DashboardFilters, RpcFilters } from "@/lib/analytics/filters";
 import type { InsightFormat } from "@/lib/analytics/insights";
@@ -35,6 +36,11 @@ export type DashboardContextValue = {
   drillDown: boolean;
   /** Free-text content (top terms, latest answers) may be shown. */
   textAnswers: boolean;
+  /**
+   * Opens the chart builder (editors only): edit a custom widget, or start a
+   * new chart (optionally from a spec, e.g. "open in chart builder").
+   */
+  openBuilder: ((widget?: Widget, spec?: ChartSpec) => void) | null;
 };
 
 export const DashboardContext = createContext<DashboardContextValue | null>(

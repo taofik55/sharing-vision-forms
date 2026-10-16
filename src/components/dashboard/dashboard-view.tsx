@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  ChartColumnBig,
   Expand,
   Info,
   LoaderCircle,
@@ -28,6 +29,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { saveDashboardAction } from "@/lib/analytics/actions";
 import { bottomOf, buildAutoDashboard } from "@/lib/analytics/auto";
+import { emptySpec, type ChartSpec } from "@/lib/analytics/chart-spec";
 import type { DashboardConfig, Widget } from "@/lib/analytics/config";
 import {
   isWithinDateWindow,
@@ -37,10 +39,13 @@ import {
   type RpcFilters,
 } from "@/lib/analytics/filters";
 import type { DashboardBundle } from "@/lib/analytics/types";
+import { newId } from "@/lib/forms/operations";
 import type { FormDefinition, Question } from "@/lib/forms/schema";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { AddWidgetDialog } from "./add-widget-dialog";
+import { ChartBuilder, type BuilderDraft } from "./chart-builder";
+import { CustomChartWidget } from "./custom-chart";
 import {
   DashboardContext,
   useLabels,
@@ -131,6 +136,7 @@ function DashboardViewInner(props: Omit<DashboardViewProps, "source">) {
   const [confirmReset, setConfirmReset] = useState(false);
   const [flashing, setFlashing] = useState<Set<string>>(new Set());
   const [lastEventAt, setLastEventAt] = useState<number | null>(null);
+  const [builder, setBuilder] = useState<BuilderDraft | null>(null);
   const presentRef = useRef<HTMLDivElement>(null);
 
   const rpcFilters = useStable(toRpcFilters(filters));
@@ -293,6 +299,55 @@ function DashboardViewInner(props: Omit<DashboardViewProps, "source">) {
     [setConfig],
   );
 
+  const openBuilder = useCallback((widget?: Widget, spec?: ChartSpec) => {
+    if (widget?.kind === "custom" && widget.custom)
+      setBuilder({
+        widgetId: widget.id,
+        spec: widget.custom,
+        title: widget.title,
+        note: widget.note,
+      });
+    else setBuilder({ spec: spec ?? emptySpec("bar") });
+  }, []);
+
+  const saveBuilder = useCallback(
+    (draft: BuilderDraft) => {
+      if (draft.widgetId) {
+        updateWidget(draft.widgetId, {
+          custom: draft.spec,
+          title: draft.title,
+          note: draft.note,
+        });
+      } else {
+        const id = `custom:${newId()}`;
+        const chart = draft.spec.chart;
+        const wide = chart === "table" || chart === "pivot";
+        addWidget({
+          id,
+          kind: "custom",
+          origin: "user",
+          custom: draft.spec,
+          title: draft.title,
+          note: draft.note,
+          layout: {
+            x: 0,
+            y: 0,
+            w: chart === "kpi" ? 4 : wide ? 12 : 6,
+            h: chart === "kpi" ? 5 : wide ? 12 : 10,
+          },
+        });
+        // Bring the new chart into view once the grid has placed it.
+        setTimeout(() => {
+          document
+            .querySelector(`[data-widget-id="${CSS.escape(id)}"]`)
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 400);
+      }
+      setBuilder(null);
+    },
+    [updateWidget, addWidget],
+  );
+
   const onLayoutChange = useCallback(
     (layout: Layout) => {
       if (!editMode) return;
@@ -395,6 +450,7 @@ function DashboardViewInner(props: Omit<DashboardViewProps, "source">) {
     presenting,
     drillDown: mode !== "public",
     textAnswers: props.textAnswers ?? true,
+    openBuilder: canEdit ? openBuilder : null,
   };
 
   const visible = config.widgets.filter((w) => editMode || !w.hidden);
@@ -429,6 +485,8 @@ function DashboardViewInner(props: Omit<DashboardViewProps, "source">) {
         return <KpiWidget widget={widget} />;
       case "text":
         return <TextWidget widget={widget} />;
+      case "custom":
+        return <CustomChartWidget widget={widget} />;
     }
   }
 
@@ -493,6 +551,15 @@ function DashboardViewInner(props: Omit<DashboardViewProps, "source">) {
           )}
           {canEdit && !presenting && (
             <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openBuilder()}
+                data-testid="open-chart-builder"
+              >
+                <ChartColumnBig aria-hidden />
+                {t("chartBuilder.open")}
+              </Button>
               {editMode && (
                 <>
                   <AddWidgetDialog
@@ -556,6 +623,14 @@ function DashboardViewInner(props: Omit<DashboardViewProps, "source">) {
           onLayoutChange={onLayoutChange}
           render={render}
         />
+
+        {canEdit && (
+          <ChartBuilder
+            draft={builder}
+            onClose={() => setBuilder(null)}
+            onSave={saveBuilder}
+          />
+        )}
 
         <ConfirmDialog
           open={confirmReset}

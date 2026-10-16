@@ -1,5 +1,8 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
+import { fieldType, type ChartSpec } from "@/lib/analytics/chart-spec";
+import { parseConfig } from "@/lib/analytics/config";
+import { loadFormVersions } from "@/lib/analytics/server";
 import type { DashboardBundle, QuestionStats } from "@/lib/analytics/types";
 import type { Locale } from "@/lib/i18n/routing";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -104,7 +107,8 @@ export type PublicCall =
   | { fn: "bundle" }
   | { fn: "suggestions" }
   | { fn: "cross"; a: string; b: string }
-  | { fn: "text"; key: string; beforeAt?: string; beforeId?: string };
+  | { fn: "text"; key: string; beforeAt?: string; beforeId?: string }
+  | { fn: "chart"; widgetId: string };
 
 export function parsePublicCall(params: URLSearchParams): PublicCall | null {
   switch (params.get("fn")) {
@@ -116,6 +120,12 @@ export function parsePublicCall(params: URLSearchParams): PublicCall | null {
       const a = params.get("a") ?? "";
       const b = params.get("b") ?? "";
       return KEY.test(a) && KEY.test(b) ? { fn: "cross", a, b } : null;
+    }
+    case "chart": {
+      const widgetId = params.get("widget") ?? "";
+      return /^[A-Za-z0-9_:-]{1,100}$/.test(widgetId)
+        ? { fn: "chart", widgetId }
+        : null;
     }
     case "text": {
       const key = params.get("key") ?? "";
@@ -177,6 +187,40 @@ export async function runPublicCall(
           status: error.code === "P0002" ? 404 : 500,
           body: { error: "not_found" },
         };
+      return { status: 200, body: data };
+    }
+    case "chart": {
+      // Only charts saved in the dashboard config run here; the request never
+      // carries a spec. Text columns follow the share's free-text setting.
+      const { data: saved } = await admin
+        .from("dashboards")
+        .select("config")
+        .eq("form_id", share.formId)
+        .maybeSingle();
+      const widget = parseConfig(saved?.config)?.widgets.find(
+        (w) => w.id === call.widgetId && w.kind === "custom" && !w.hidden,
+      );
+      const spec: ChartSpec | undefined = widget?.custom;
+      if (!spec) return { status: 404, body: { error: "not_found" } };
+      if (!share.includeTextAnswers) {
+        const { questions } = await loadFormVersions(
+          share.formId,
+          share.currentVersionId,
+          admin,
+        );
+        const refs = [
+          ...spec.dimensions.map((d) => d.field),
+          ...spec.filters.map((x) => x.field),
+        ];
+        if (refs.some((r) => fieldType(r, questions) === "text"))
+          return { status: 403, body: { error: "text_answers_hidden" } };
+      }
+      const { data, error } = await admin.rpc("dashboard_query", {
+        p_form_id: share.formId,
+        p_spec: spec as never,
+        p_filters: filters,
+      });
+      if (error) return { status: 500, body: { error: "server_error" } };
       return { status: 200, body: data };
     }
     case "text": {

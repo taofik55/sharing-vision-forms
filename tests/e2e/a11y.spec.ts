@@ -77,6 +77,15 @@ test.describe("accessibility", () => {
       timeout: 45_000,
     });
     await expectNoViolations(page);
+
+    // Chart builder with a configured chart and its preview.
+    await page.getByTestId("open-chart-builder").click();
+    const builder = page.getByTestId("chart-builder");
+    await builder.getByTestId("quick-start").first().click();
+    await expect(
+      builder.getByTestId("builder-preview").locator("svg").first(),
+    ).toBeVisible({ timeout: 15_000 });
+    await expectNoViolations(page);
   });
 });
 

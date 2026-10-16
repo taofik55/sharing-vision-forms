@@ -399,3 +399,61 @@ Status: **done** (2026-10-13)
 - **Few options = radio, many = searchable dropdown**: single-choice cards have a "Show options as: Radio buttons / Dropdown with search" switch (changes the question type between `multiple_choice` and `dropdown`; answers, analytics and logic are identical) with a hint above 5 options. Respondents get a searchable dropdown (`src/components/combobox.tsx`, cmdk; plain "contains" match on the label). In the builder, short fixed lists are radio buttons (and / or, logic operators, star count, scale ends) and long lists are searchable dropdowns (question type, section, logic question and value; search appears above 7 entries).
 - **Placeholder**: new optional `placeholder` (max 200) in the form schema for short answer, paragraph, email, phone, number and dropdown. Empty = "Jawaban Anda" / "Your answer" (dropdown: "Pilih" / "Choose"). Changing to a type without placeholders drops it. Existing definitions stay valid (optional field, published versions untouched).
 - Tests: schema / operations unit tests for the placeholder; `builder.spec.ts` updated for in-place editing and radio operators, plus a new test (focus after adding, placeholder, dropdown suggestion and switch, typing to filter the respondent dropdown). `public-form.spec.ts` waits for the 3 s anti-spam window after the reload (a production build is fast enough to trip it).
+
+## Chart builder (Superset / Looker style custom charts)
+
+Status: **done** (2026-10-16)
+
+### Plan (written at start)
+
+1. **Spec** (`src/lib/analytics/chart-spec.ts`, Zod): chart type, dimensions (question or metadata field, with time grain or numeric bins), metrics (count, % of responses, average, median, min, max, sum, NPS, CSAT), per-chart filters, sort, top-N, display options. One schema shared by the builder, the widget renderer and the server checks.
+2. **Query RPC** (`dashboard_query(form_id, spec, filters)`, new migration): `SECURITY DEFINER`, `search_path = ''`, `_assert_can_view`, global dashboard filters + chart filters, aggregation in Postgres, bounded output (≤ 500 rows, pivot ≤ 100 × 50, scatter ≤ 2,000 points). Dynamic SQL built only from fixed fragments; every user value (question keys, filter values) is a bound parameter. Email / phone answers are never chart columns.
+3. **Widget kind `custom`** in the dashboard config (additive, configVersion stays 1).
+4. **Builder UI** (full screen, editors / admins): columns panel (questions + metadata, search, drag or click), chart gallery (KPI, bar, column, line, area, donut, table, pivot, heatmap, scatter, histogram; stacked option), slots per chart, settings per slot (aggregation, grain, bins, label), filters, sort / limit, display options, live preview. Opens from "Add widget" and from a widget's menu (existing question widgets can be opened in the builder).
+5. **Rendering**: new chart pieces (multi-series bar / line / area, pivot, KPI, scatter) following the dataviz palette rules; public dashboards run only charts saved in the dashboard config (never a spec from the request).
+6. **Tests**: spec unit tests, RPC integration tests with hand-computed values and access checks, Playwright flow (build, save, reload, viewer read-only).
+
+### What is done
+
+- **Spec** `src/lib/analytics/chart-spec.ts`: one Zod schema (`chartSpecSchema`) for chart type, up to 2 dimensions (question or response metadata: submitted at, device, language, form version, time to complete; time grain hour / day / week / month / weekday / hour of day; numeric ranges), up to 5 metrics (response count, % of responses, average, median, min, max, sum, NPS, CSAT), up to 10 chart filters, sort, limit and display options. Pure helpers drive the UI: `CHART_SHAPES` / `slotsFor` (which slots a chart has), `slotAccepts`, `placeField` (drop), `autoPlace` (click), `changeChart` (switch type, keeping what fits), `specProblems` (what is missing), `cleanSpec` (filters without a value are skipped), `specFromQuestion`.
+- **Query RPC** `dashboard_query(form_id, spec, filters)` (`20261018090000_chart_builder_query.sql`, tuned in `20261018100000_chart_builder_query_perf.sql`): SECURITY DEFINER, `search_path = ''`, `_assert_can_view`, dashboard filters + chart filters, aggregation in Postgres. Output is bounded (≤ 500 groups; two dimensions: top 100 × 50 most frequent; scatter ≤ 2,000 points). Every reference is re-validated against the form (`_chart_field_type`); email / phone answers are rejected (22023). SQL text comes only from fixed fragments; question keys, filter values and filters are bound parameters.
+- **Results** `src/lib/analytics/chart-result.ts`: query result → chart model (KPI, single series, multi series, matrix, table, scatter) + accessible data table, with option / device / language / version / weekday / period / range labels, "(no answer)", number formats by aggregation, empty histogram ranges, stable series order (form option order), top 8 series for the colour slots (the rest stays in the table).
+- **Charts** `src/components/charts/custom-charts.tsx`: grouped / stacked bars and columns, multi-line and (stacked) area with a legend for ≥ 2 series, pivot and heatmap matrices (values always printed), scatter with correlation, big-number KPI. `BarChart` gained `showValues`; axes allow decimals for averages; long category labels no longer overlap.
+- **Widget** kind `custom` (`CustomChartWidget`): title (custom or generated, e.g. "Average X by Y"), "From N responses", badges (chart filters, "showing 20 of 35 groups", hidden colour groups), key insight (highest group, correlation), table toggle, PNG download, drill-down on single-dimension choice charts, edit button for editors.
+- **Builder** (`chart-builder.tsx`, `chart-builder-panels.tsx`): full-screen dialog for editors / admins. Columns panel (search; questions, response info, removed questions; drag with dnd-kit, click to auto-place, "+" menu to pick the slot). Chart gallery (11 types with a one-line hint). Slots named per chart (Group by / Break down by (colour) / Value; Rows / Columns; Slices; X / Y), each droppable with highlight for compatible columns and a "+ Add" picker. Chip settings: calculation (with a hint per aggregation), "of column", time grain, ranges, custom label. Chart filters (any of / none of / greater / less / after / before / answered / not answered, with option checkboxes). Sort & limit. Display tab: palette, number format, stack, values, legend, include unanswered, note. Live preview (debounced 300 ms, aggregated in Postgres) with "what is missing" guidance, quick-start ideas for an empty chart, and the data rows. Discard confirmation, Esc-safe. On phones: Columns / Setup / Preview tabs.
+- **Entry points**: "Build chart" in the dashboard header (editors, no need to enter edit mode); pencil on a custom chart; widget menu "Edit chart" / "Open in chart builder" (question charts open as a new chart).
+- **Public links**: `/api/d/{token}/stats?fn=chart&widget={id}` runs only a non-hidden custom chart saved in the dashboard config (never a spec from the request); text columns follow the share's free-text setting (403 otherwise).
+- **i18n**: all builder strings in `messages/en.json` / `id.json` (`chartBuilder.*`).
+- **Tests**: unit `tests/unit/chart-builder.test.ts` (placement, auto-place, chart switching, problems, cleaning, schema round trip, labels, formats, models); integration `tests/integration/chart-query.test.ts` (17: hand-computed counts, averages, checkbox percentages, grains, ranges, sort, table metrics, filters, breakdown, pivot, scatter r, safety 22023, injection, access 42501, public share API 200 / 404 / 403 / 400); e2e `tests/e2e/chart-builder.spec.ts` (click + drag columns, change calculation to NPS, preview, save, reload, table, edit to KPI, open a question chart in the builder, viewer read-only) and axe on the open builder (`a11y.spec.ts`).
+- Results: lint (0 errors, 2 existing warnings), typecheck, Vitest 387 / 387, Playwright 23 / 23 (after `pnpm seed:demo`), `supabase db lint` clean, `supabase db reset` applies all migrations.
+
+### Decisions
+
+- Builder access: editors and admins (`canEdit`); viewers and public links only see saved charts.
+- Custom charts are additive widgets (`kind: "custom"`, `configVersion` stays 1); old configs stay valid. "Open in chart builder" on a question chart creates a new chart and leaves the original (hide it if not needed).
+- One RPC for every chart type; the browser never sends SQL or column names, only the spec, and the server re-validates it.
+- Counts are response counts. A checkbox dimension counts each response once per selected option, so groups can add up to more than the total (as in the auto charts).
+- Time is grouped in WIB (Asia/Jakarta) for submission time, UTC for date answers (no time of day). A time axis defaults to up to 500 points; other dimensions to the top 20.
+- Numeric questions of type "number" and time-to-complete default to 10 equal ranges; ratings and scales use exact values.
+- Performance at 100k responses (local, median of 5): 180–440 ms per chart (KPI 180, one dimension 215, per-day average 350, two dimensions 420, five-metric table with filter 425, histogram 435). Hash joins (`enable_nestloop = off` on the function) and `count(*)` instead of `count(distinct)` took them from 0.5–1.5 s.
+
+### Known gaps
+
+- No calculated fields, custom SQL, joins across forms, or dual axes (by design).
+- Free-text dimensions group exact answers (no word extraction); long-tail text is cut by the limit.
+- Two dimensions show the top 100 × 50; larger cross tables are summarized.
+- Keyboard users place columns with the "+" menu or click (no keyboard drag).
+- Histogram ranges are equal width between the observed min and max (edges may be fractional).
+
+### Manual verification checklist
+
+- [ ] As editor, open a dashboard → **Build chart** → quick-start "Responses per day" shows a line.
+- [ ] Pick **Column**, drag a choice question to _Group by_ and a checkbox question to _Break down by_; toggle **Stack groups**; legend shows each option.
+- [ ] Drag a rating to _Value_ → "Average"; change calculation to Median / CSAT; set a custom label.
+- [ ] Add a chart filter (e.g. Device is any of Mobile); badge "1 chart filter" appears on the saved widget.
+- [ ] Switch to Heatmap / Pivot / Table / Scatter / Histogram / KPI; the preview updates and "what is missing" explains empty slots.
+- [ ] Save → widget appears at the bottom; reload → still there; pencil → edit → save changes.
+- [ ] Dashboard date / answer filters change the custom chart too.
+- [ ] Viewer: sees the chart, no Build chart / pencil.
+- [ ] Public link: the chart renders; a chart on a free-text column shows "hidden" unless text answers are allowed.
+- [ ] Phone width: Columns / Setup / Preview tabs work; dark mode and Indonesian labels look right.

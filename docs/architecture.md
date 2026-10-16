@@ -330,7 +330,7 @@ flowchart LR
 ```
 
 - Tokens: 32 random bytes, base64url (43 characters), generated in Node; regenerate replaces the token, revoke deletes the row. Share rows are managed through server actions as the signed-in user, so RLS (`can_edit_form`) decides who may create or change them.
-- The API accepts `fn = bundle | suggestions | cross | text` plus `from` / `to`; the form id never comes from the request. `text` requires `include_text_answers`; without it, text statistics are stripped (`terms`, average length). The bundle's `creator` is removed. Identifiers are never part of these RPCs.
+- The API accepts `fn = bundle | suggestions | cross | text | chart` plus `from` / `to`; `chart` takes a `widget` id and runs only a non-hidden custom chart saved in the dashboard config; the form id never comes from the request. `text` requires `include_text_answers`; without it, text statistics are stripped (`terms`, average length). The bundle's `creator` is removed. Identifiers are never part of these RPCs.
 - Rate limit: 600 requests per 10 minutes per IP and token (`check_rate_limit`, salted IP hash). Responses carry `Cache-Control: no-store` and `X-Robots-Tag: noindex`; the page sets `robots: noindex, nofollow`.
 - The page renders the same `DashboardView` in `mode="public"`: data source = the share API, 10 s polling (anonymous users cannot use Realtime), date filter only, no drill-down, no editing, export or share controls.
 
@@ -346,6 +346,24 @@ flowchart LR
 
 `next.config.ts`: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, HSTS on every path; `X-Frame-Options: DENY` and `frame-ancestors 'none'` on everything except public forms (`/{locale}/f/...`, embeddable). `poweredByHeader: false`. `pnpm check:secrets` scans a production build for server secrets.
 
+## Chart builder
+
+```mermaid
+flowchart LR
+  B["Builder (spec in React state)"] -->|debounced| Q["dashboard_query(form, spec, filters)"]
+  W["Saved custom widget (dashboards.config)"] --> Q
+  PUB["/api/d/{token}/stats?fn=chart&widget=id"] -->|loads spec from config| Q
+  Q --> V{_assert_can_view + _chart_field_type per field}
+  V --> SQL["fixed SQL fragments, bound keys / values"]
+  SQL --> R["{kind, rows, total, groups, bins} or {points, r}"]
+  R --> M["chart-result.ts → chart model + table"]
+```
+
+- The spec (`chartSpecSchema`) is the only contract: chart type, dimensions (question key or metadata field, grain, ranges), metrics, chart filters, sort, limit, display options. It lives in the widget (`kind: "custom"`, `custom`).
+- `dashboard_query` builds one row per filtered response (`base`: `_dashboard_responses` + one left join per referenced question key), expands dimensions laterally (checkbox options unnest; time grains; `width_bucket` ranges with edges returned in `bins`), and aggregates with `count(*)`, `percent`, `avg`, `percentile_cont`, `min`, `max`, `sum`, NPS and CSAT. Two dimensions keep the top 100 of the first (ranked by the metric with each response counted once) and the 50 most frequent of the second.
+- Safety: chart, aggregation, grain and operator values are whitelisted before they choose a SQL fragment; keys go in `$3` (text[]), filter values are read from `$4` (the spec) inside the query; numbers in the text (bin edges, limits, indexes) are computed in PL/pgSQL. Email and phone questions raise 22023.
+- Performance: `enable_nestloop = off` and `plan_cache_mode = force_custom_plan` on the function; 180–440 ms at 100k responses locally.
+
 ## Form definition and versions
 
 - `src/lib/forms/schema.ts` holds the only Zod schema of a form definition (builder, renderer, server validation, analytics).
@@ -356,30 +374,32 @@ flowchart LR
 
 ## Code map
 
-| Concern                                                | Location                                                                                                             |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| Session refresh, auth redirect, locale routing         | `src/proxy.ts`                                                                                                       |
-| Current user, `requireUser`, `requireRole`             | `src/lib/auth/session.ts`                                                                                            |
-| Role helpers and navigation                            | `src/lib/auth/roles.ts`                                                                                              |
-| Supabase clients                                       | `src/lib/supabase/{client,server,admin}.ts`                                                                          |
-| i18n config                                            | `src/lib/i18n/`, `messages/`                                                                                         |
-| 403 page                                               | `src/app/[locale]/(app)/forbidden.tsx`                                                                               |
-| Admin users                                            | `src/app/[locale]/(app)/admin/users/`                                                                                |
-| Schema                                                 | `supabase/migrations/`                                                                                               |
-| Form definition schema, logic, answer validation       | `src/lib/forms/{schema,logic,validation}.ts`                                                                         |
-| Builder operations, templates, hashing                 | `src/lib/forms/{operations,templates,hash}.ts`                                                                       |
-| Form server actions, access helper                     | `src/lib/forms/{actions,access}.ts`                                                                                  |
-| Builder UI                                             | `src/components/builder/`                                                                                            |
-| Form renderer (preview now, live in Phase 3)           | `src/components/renderer/`                                                                                           |
-| Forms list, settings, sharing, public link             | `src/components/forms/`                                                                                              |
-| Dashboard RPCs, demo generator                         | `supabase/migrations/*phase4*`, `*dashboard*`, `*bundle_questions*`                                                  |
-| Auto dashboard, config, merge, filters, insights       | `src/lib/analytics/`                                                                                                 |
-| Dashboard UI, charts, live updates                     | `src/components/dashboard/`, `src/components/charts/`                                                                |
-| Responses tab                                          | `src/components/responses/`                                                                                          |
-| Demo data script                                       | `scripts/seed-demo.ts`                                                                                               |
-| Summaries, export RPC, share-safe RPCs, demo tools SQL | `supabase/migrations/20261017090000_phase5_scale_export.sql`                                                         |
-| Export (CSV / XLSX)                                    | `src/lib/export/`, `src/app/api/forms/[id]/export/route.ts`                                                          |
-| Share links (actions, token resolution, public API)    | `src/lib/shares/`, `src/app/api/d/[token]/stats/route.ts`, `src/app/[locale]/d/[token]/`                             |
-| Share dialog, export menu, print                       | `src/components/dashboard/{share-dialog,export-menu,dashboard-grid}.tsx`                                             |
-| Scale page, demo actions, timed RPC API                | `src/app/[locale]/(app)/admin/demo/scale/`, `src/components/demo/`, `src/lib/demo/`, `src/app/api/demo/rpc/route.ts` |
-| Benchmark, secret scan                                 | `scripts/bench-dashboard.ts`, `scripts/check-client-secrets.mjs`                                                     |
+| Concern                                                | Location                                                                                                                    |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Session refresh, auth redirect, locale routing         | `src/proxy.ts`                                                                                                              |
+| Current user, `requireUser`, `requireRole`             | `src/lib/auth/session.ts`                                                                                                   |
+| Role helpers and navigation                            | `src/lib/auth/roles.ts`                                                                                                     |
+| Supabase clients                                       | `src/lib/supabase/{client,server,admin}.ts`                                                                                 |
+| i18n config                                            | `src/lib/i18n/`, `messages/`                                                                                                |
+| 403 page                                               | `src/app/[locale]/(app)/forbidden.tsx`                                                                                      |
+| Admin users                                            | `src/app/[locale]/(app)/admin/users/`                                                                                       |
+| Schema                                                 | `supabase/migrations/`                                                                                                      |
+| Form definition schema, logic, answer validation       | `src/lib/forms/{schema,logic,validation}.ts`                                                                                |
+| Builder operations, templates, hashing                 | `src/lib/forms/{operations,templates,hash}.ts`                                                                              |
+| Form server actions, access helper                     | `src/lib/forms/{actions,access}.ts`                                                                                         |
+| Builder UI                                             | `src/components/builder/`                                                                                                   |
+| Form renderer (preview now, live in Phase 3)           | `src/components/renderer/`                                                                                                  |
+| Forms list, settings, sharing, public link             | `src/components/forms/`                                                                                                     |
+| Dashboard RPCs, demo generator                         | `supabase/migrations/*phase4*`, `*dashboard*`, `*bundle_questions*`                                                         |
+| Auto dashboard, config, merge, filters, insights       | `src/lib/analytics/`                                                                                                        |
+| Dashboard UI, charts, live updates                     | `src/components/dashboard/`, `src/components/charts/`                                                                       |
+| Responses tab                                          | `src/components/responses/`                                                                                                 |
+| Demo data script                                       | `scripts/seed-demo.ts`                                                                                                      |
+| Summaries, export RPC, share-safe RPCs, demo tools SQL | `supabase/migrations/20261017090000_phase5_scale_export.sql`                                                                |
+| Export (CSV / XLSX)                                    | `src/lib/export/`, `src/app/api/forms/[id]/export/route.ts`                                                                 |
+| Share links (actions, token resolution, public API)    | `src/lib/shares/`, `src/app/api/d/[token]/stats/route.ts`, `src/app/[locale]/d/[token]/`                                    |
+| Share dialog, export menu, print                       | `src/components/dashboard/{share-dialog,export-menu,dashboard-grid}.tsx`                                                    |
+| Scale page, demo actions, timed RPC API                | `src/app/[locale]/(app)/admin/demo/scale/`, `src/components/demo/`, `src/lib/demo/`, `src/app/api/demo/rpc/route.ts`        |
+| Benchmark, secret scan                                 | `scripts/bench-dashboard.ts`, `scripts/check-client-secrets.mjs`                                                            |
+| Chart builder spec, results, RPC                       | `src/lib/analytics/{chart-spec,chart-result}.ts`, `supabase/migrations/20261018*_chart_builder_query*.sql`                  |
+| Chart builder UI, custom widget, chart pieces          | `src/components/dashboard/{chart-builder,chart-builder-panels,custom-chart}.tsx`, `src/components/charts/custom-charts.tsx` |

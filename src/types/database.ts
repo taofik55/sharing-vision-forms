@@ -612,6 +612,10 @@ export type Database = {
         Returns: Json;
       };
       _can_see_identifiers: { Args: { p_form_id: string }; Returns: boolean };
+      _chart_field_type: {
+        Args: { p_field: Json; p_form_id: string };
+        Returns: string;
+      };
       _cross_stats_f: {
         Args: { p_filters: Json; p_form_id: string; p_qa: Json; p_qb: Json };
         Returns: Json;
@@ -720,6 +724,10 @@ export type Database = {
       };
       dashboard_overview: {
         Args: { p_filters?: Json; p_form_id: string };
+        Returns: Json;
+      };
+      dashboard_query: {
+        Args: { p_filters?: Json; p_form_id: string; p_spec: Json };
         Returns: Json;
       };
       delete_demo_responses: {

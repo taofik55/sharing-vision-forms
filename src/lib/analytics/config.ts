@@ -1,5 +1,6 @@
 /** Persisted dashboard configuration (dashboards.config). */
 import { z } from "zod";
+import { chartSpecSchema } from "./chart-spec";
 
 export const CONFIG_VERSION = 1;
 
@@ -32,6 +33,8 @@ export const WIDGET_KINDS = [
   "cross",
   "kpi",
   "text",
+  /** Chart builder widget (spec in `custom`). */
+  "custom",
 ] as const;
 export type WidgetKind = (typeof WIDGET_KINDS)[number];
 
@@ -67,6 +70,7 @@ export const widgetSchema = z.object({
   kpi: z
     .object({ metric: z.enum(KPI_METRICS), questionKey: key.optional() })
     .optional(),
+  custom: chartSpecSchema.optional(),
   layout: layoutSchema,
 });
 export type Widget = z.infer<typeof widgetSchema>;

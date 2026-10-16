@@ -9,7 +9,9 @@ import {
   GripVertical,
   Info,
   Lightbulb,
+  PencilLine,
   Table2,
+  WandSparkles,
   Trash2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -44,6 +46,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import { specFromQuestion } from "@/lib/analytics/chart-spec";
 import { PALETTES, type ChartType, type Widget } from "@/lib/analytics/config";
 import { cn } from "@/lib/utils";
 import { useDashboard } from "./dashboard-context";
@@ -87,8 +90,14 @@ export function WidgetCard({
   bare,
 }: WidgetCardProps) {
   const t = useTranslations("widgets");
-  const { editMode, updateWidget, removeWidget, flashing, presenting } =
-    useDashboard();
+  const {
+    editMode,
+    updateWidget,
+    removeWidget,
+    flashing,
+    presenting,
+    openBuilder,
+  } = useDashboard();
   const [showTable, setShowTable] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -180,6 +189,19 @@ export function WidgetCard({
                 ) : (
                   <Table2 className="size-4" aria-hidden />
                 )}
+              </Button>
+            )}
+            {widget.kind === "custom" && openBuilder && !presenting && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                aria-label={t("editChart")}
+                title={t("editChart")}
+                onClick={() => openBuilder(widget)}
+                data-testid="edit-chart"
+              >
+                <PencilLine className="size-4" aria-hidden />
               </Button>
             )}
             <Button
@@ -275,6 +297,12 @@ function WidgetMenu({
 }) {
   const t = useTranslations("widgets");
   const tc = useTranslations("common");
+  const { openBuilder, questions } = useDashboard();
+  const question =
+    widget.kind === "question" && widget.questionKey
+      ? questions[widget.questionKey]
+      : undefined;
+  const fromQuestion = question ? specFromQuestion(question) : null;
   const [editing, setEditing] = useState<"rename" | "note" | null>(null);
   const [draft, setDraft] = useState("");
   const size =
@@ -299,6 +327,21 @@ function WidgetMenu({
           className="w-56"
           onCloseAutoFocus={(e) => editing && e.preventDefault()}
         >
+          {openBuilder && widget.kind === "custom" && (
+            <DropdownMenuItem onSelect={() => openBuilder(widget)}>
+              <PencilLine aria-hidden />
+              {t("editChart")}
+            </DropdownMenuItem>
+          )}
+          {openBuilder && fromQuestion && (
+            <DropdownMenuItem
+              onSelect={() => openBuilder(undefined, fromQuestion)}
+              data-testid="open-in-builder"
+            >
+              <WandSparkles aria-hidden />
+              {t("openInBuilder")}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onSelect={() => update({ hidden: !widget.hidden })}>
             {widget.hidden ? <Eye aria-hidden /> : <EyeOff aria-hidden />}
             {widget.hidden ? t("show") : t("hide")}
@@ -336,23 +379,25 @@ function WidgetMenu({
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           )}
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>{t("palette")}</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuRadioGroup
-                value={widget.palette ?? "categorical"}
-                onValueChange={(v) =>
-                  update({ palette: v as Widget["palette"] })
-                }
-              >
-                {PALETTES.map((p) => (
-                  <DropdownMenuRadioItem key={p} value={p}>
-                    {t(`palettes.${p}`)}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
+          {widget.kind !== "custom" && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>{t("palette")}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuRadioGroup
+                  value={widget.palette ?? "categorical"}
+                  onValueChange={(v) =>
+                    update({ palette: v as Widget["palette"] })
+                  }
+                >
+                  {PALETTES.map((p) => (
+                    <DropdownMenuRadioItem key={p} value={p}>
+                      {t(`palettes.${p}`)}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )}
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>{t("size")}</DropdownMenuSubTrigger>
             <DropdownMenuSubContent>

@@ -11,6 +11,8 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import type { ChartQueryResult } from "@/lib/analytics/chart-result";
+import type { ChartSpec } from "@/lib/analytics/chart-spec";
 import type { RpcFilters } from "@/lib/analytics/filters";
 import type {
   CrossStats,
@@ -29,14 +31,22 @@ export type DashboardRpc =
   | "dashboard_bundle"
   | "cross_stats"
   | "cross_suggestions"
-  | "question_text_answers";
+  | "question_text_answers"
+  | "dashboard_query";
+
+/** Extra context some sources need (public dashboards run saved charts by id). */
+export type CallMeta = { widgetId?: string };
 
 /**
  * Where dashboard data comes from: Supabase as the signed-in user (app), the
  * share-token API (public dashboards) or the timed demo API (scale page).
  */
 export type DataSource = {
-  call: <T>(fn: DashboardRpc, args: Record<string, unknown>) => Promise<T>;
+  call: <T>(
+    fn: DashboardRpc,
+    args: Record<string, unknown>,
+    meta?: CallMeta,
+  ) => Promise<T>;
 };
 
 export const supabaseSource: DataSource = {
@@ -50,13 +60,22 @@ export const supabaseSource: DataSource = {
 /** Public dashboards: GET /api/d/:token/stats (date range only). */
 export function publicSource(token: string): DataSource {
   return {
-    call: async <T>(fn: DashboardRpc, args: Record<string, unknown>) => {
+    call: async <T>(
+      fn: DashboardRpc,
+      args: Record<string, unknown>,
+      meta?: CallMeta,
+    ) => {
       const params = new URLSearchParams();
       const filters = (args.p_filters ?? {}) as { from?: string; to?: string };
       if (filters.from) params.set("from", filters.from);
       if (filters.to) params.set("to", filters.to);
       if (fn === "dashboard_bundle") params.set("fn", "bundle");
-      else if (fn === "cross_suggestions") params.set("fn", "suggestions");
+      // Public viewers never send a chart spec: the server runs the chart
+      // saved under this widget id in the dashboard config.
+      else if (fn === "dashboard_query") {
+        params.set("fn", "chart");
+        params.set("widget", meta?.widgetId ?? "");
+      } else if (fn === "cross_suggestions") params.set("fn", "suggestions");
       else if (fn === "cross_stats") {
         params.set("fn", "cross");
         params.set("a", String(args.p_question_a));
@@ -150,6 +169,30 @@ export function useCrossSuggestions(
       }),
     staleTime: 5 * 60_000,
     placeholderData: (previous) => previous,
+  });
+}
+
+/** One custom chart (aggregated in Postgres by dashboard_query). */
+export function useChartQuery(
+  formId: string,
+  widgetId: string,
+  spec: ChartSpec | undefined,
+  filters: RpcFilters,
+  version: number,
+  enabled = true,
+) {
+  const source = useDataSource();
+  return useQuery({
+    queryKey: ["chart-query", formId, widgetId, spec, filters, version],
+    enabled: enabled && Boolean(spec),
+    queryFn: () =>
+      source.call<ChartQueryResult>(
+        "dashboard_query",
+        { p_form_id: formId, p_spec: spec, p_filters: filters },
+        { widgetId },
+      ),
+    placeholderData: (previous) => previous,
+    retry: false,
   });
 }
 

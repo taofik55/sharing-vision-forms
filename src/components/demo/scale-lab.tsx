@@ -56,6 +56,7 @@ const TARGETS: Record<DashboardRpc | "render", { good: number; ok: number }> = {
   cross_stats: { good: 400, ok: 1000 },
   cross_suggestions: { good: 1000, ok: 2000 },
   question_text_answers: { good: 200, ok: 500 },
+  dashboard_query: { good: 400, ok: 1000 },
   render: { good: 100, ok: 300 },
 };
 
