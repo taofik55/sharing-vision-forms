@@ -551,7 +551,9 @@
       "maxLabel": "Label tertinggi",
       "ratingMax": "Jumlah bintang",
       "key": "Kunci",
-      "keyHint": "Id tetap yang dipakai jawaban dan analitik. Tidak pernah berubah."
+      "keyHint": "Id tetap yang dipakai jawaban dan analitik. Tidak pernah berubah.",
+      "advanced": "Pengaturan lanjutan",
+      "advancedHint": "Judul, deskripsi, placeholder, opsi, dan “wajib diisi” diubah langsung di kartu."
     },
     "logic": {
       "title": "Logika",
@@ -573,6 +575,23 @@
       "desktop": "Desktop",
       "mobile": "Ponsel",
       "notice": "Hanya pratinjau. Jawaban tidak disimpan."
+    },
+    "search": "Cari…",
+    "noMatches": "Tidak ada yang cocok.",
+    "card": {
+      "descriptionPlaceholder": "Deskripsi (opsional)",
+      "placeholder": "Placeholder",
+      "placeholderHint": "Teks petunjuk di dalam kolom yang masih kosong. Kosongkan untuk memakai “{default}”.",
+      "display": "Tampilkan opsi sebagai",
+      "displayRadio": "Tombol radio",
+      "displayDropdown": "Dropdown + pencarian",
+      "displayHint": "Tombol radio cocok untuk maksimal {max} opsi; pakai dropdown dengan pencarian untuk daftar yang panjang.",
+      "suggestDropdown": "{count} opsi: dropdown dengan pencarian lebih mudah dipakai.",
+      "suggestRadio": "Hanya {count} opsi: tombol radio lebih cepat dipilih.",
+      "dropdownSummary": "{count} opsi, bisa dicari",
+      "moreOptions": "+{count} opsi lainnya",
+      "datePreview": "hh/bb/tttt",
+      "moreOnRight": "Atur skala, jumlah bintang, atau batas tanggal di panel kanan."
     }
   },
   "renderer": {
@@ -608,7 +627,9 @@
       "otherRequired": "Jelaskan jawaban “Lainnya” Anda.",
       "tooFewSelections": "Pilih lebih banyak opsi.",
       "tooManySelections": "Pilih lebih sedikit opsi."
-    }
+    },
+    "searchOptions": "Cari…",
+    "noMatches": "Tidak ada opsi yang cocok."
   },
   "formSettings": {
     "title": "Pengaturan",

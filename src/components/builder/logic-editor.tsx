@@ -2,17 +2,12 @@
 
 import { Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Combobox } from "@/components/combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   LIMITS,
   OTHER_OPTION_ID,
@@ -26,7 +21,9 @@ import {
   type ConditionOperator,
   type Question,
 } from "@/lib/forms/schema";
+import { cn } from "@/lib/utils";
 import { useBuilder } from "./builder-context";
+import { RADIO_ON } from "./choice-style";
 
 type LogicEditorProps = {
   question: Question;
@@ -79,26 +76,30 @@ export function LogicEditor({ question, update }: LogicEditorProps) {
 
       {group && (
         <>
-          <div className="flex items-center gap-2">
-            <Label className="shrink-0 text-xs">{t("combinator")}</Label>
-            <Select
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium" id="logic-combinator">
+              {t("combinator")}
+            </span>
+            {/* Two choices: radio buttons, not a dropdown. */}
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
               value={group.combinator}
               onValueChange={(value) =>
+                value &&
                 setGroup({ ...group, combinator: value as "and" | "or" })
               }
+              aria-labelledby="logic-combinator"
+              className="w-full"
             >
-              <SelectTrigger
-                size="sm"
-                className="w-full"
-                aria-label={t("combinator")}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="and">{t("and")}</SelectItem>
-                <SelectItem value="or">{t("or")}</SelectItem>
-              </SelectContent>
-            </Select>
+              <ToggleGroupItem value="and" className={cn("flex-1", RADIO_ON)}>
+                {t("and")}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="or" className={cn("flex-1", RADIO_ON)}>
+                {t("or")}
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
           <ol className="flex flex-col gap-2">
             {group.conditions.map((condition, index) => (
@@ -185,9 +186,11 @@ function ConditionRow({
       data-testid={`condition-${index}`}
     >
       <div className="flex items-center gap-1">
-        <Select
-          value={ref ? condition.questionKey : ""}
-          onValueChange={(key) => {
+        <Combobox
+          className="h-8 min-w-0 text-sm"
+          aria-label={t("builder.logic.question")}
+          value={ref ? condition.questionKey : undefined}
+          onChange={(key) => {
             const next = earlier.find((q) => q.key === key);
             if (next)
               onChange({
@@ -195,24 +198,14 @@ function ConditionRow({
                 operator: operatorsForType(next.type)[0],
               });
           }}
-        >
-          <SelectTrigger
-            size="sm"
-            className="w-full min-w-0"
-            aria-label={t("builder.logic.question")}
-          >
-            <SelectValue placeholder={t("builder.logic.chooseQuestion")} />
-          </SelectTrigger>
-          <SelectContent>
-            {earlier.map((q) => (
-              <SelectItem key={q.key} value={q.key}>
-                <span className="line-clamp-1">
-                  {q.title || t("builder.untitledQuestion")}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          options={earlier.map((q) => ({
+            value: q.key,
+            label: q.title || t("builder.untitledQuestion"),
+          }))}
+          placeholder={t("builder.logic.chooseQuestion")}
+          searchPlaceholder={t("builder.search")}
+          emptyText={t("builder.noMatches")}
+        />
         <Button
           type="button"
           variant="ghost"
@@ -225,12 +218,18 @@ function ConditionRow({
         </Button>
       </div>
       {ref && (
-        <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
-          <Select
+        <div className="flex flex-col gap-2">
+          {/* At most six operators: radio buttons that wrap. */}
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            spacing={1}
             value={
               operators.includes(condition.operator) ? condition.operator : ""
             }
             onValueChange={(op) => {
+              if (!op) return;
               const operator = op as ConditionOperator;
               onChange({
                 questionKey: condition.questionKey,
@@ -241,22 +240,19 @@ function ConditionRow({
                   : {}),
               });
             }}
+            aria-label={t("builder.logic.operator")}
+            className="flex-wrap justify-start"
           >
-            <SelectTrigger
-              size="sm"
-              className="w-full"
-              aria-label={t("builder.logic.operator")}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {operators.map((op) => (
-                <SelectItem key={op} value={op}>
-                  {operatorLabel(op)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            {operators.map((op) => (
+              <ToggleGroupItem
+                key={op}
+                value={op}
+                className={cn("h-7 px-2 text-xs", RADIO_ON)}
+              >
+                {operatorLabel(op)}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
           {operatorNeedsValue(condition.operator) && (
             <ValueInput
               question={ref}
@@ -290,21 +286,16 @@ function ValueInput({
         : []),
     ];
     return (
-      <Select
-        value={typeof value === "string" ? value : ""}
-        onValueChange={(v) => onChange(v)}
-      >
-        <SelectTrigger size="sm" className="w-full" aria-label={label}>
-          <SelectValue placeholder={t("builder.logic.chooseValue")} />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((o) => (
-            <SelectItem key={o.id} value={o.id}>
-              {o.label || "—"}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Combobox
+        className="h-8 text-sm"
+        aria-label={label}
+        value={typeof value === "string" ? value : undefined}
+        onChange={(v) => onChange(v)}
+        options={options.map((o) => ({ value: o.id, label: o.label || "—" }))}
+        placeholder={t("builder.logic.chooseValue")}
+        searchPlaceholder={t("builder.search")}
+        emptyText={t("builder.noMatches")}
+      />
     );
   }
   if (isNumericType(question.type)) {

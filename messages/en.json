@@ -551,7 +551,9 @@
       "maxLabel": "Label for highest",
       "ratingMax": "Number of stars",
       "key": "Key",
-      "keyHint": "Stable id used by answers and analytics. Never changes."
+      "keyHint": "Stable id used by answers and analytics. Never changes.",
+      "advanced": "Advanced settings",
+      "advancedHint": "Title, description, placeholder, options and “required” are edited on the card."
     },
     "logic": {
       "title": "Logic",
@@ -573,6 +575,23 @@
       "desktop": "Desktop",
       "mobile": "Mobile",
       "notice": "Preview only. Answers are not saved."
+    },
+    "search": "Search…",
+    "noMatches": "No matches.",
+    "card": {
+      "descriptionPlaceholder": "Description (optional)",
+      "placeholder": "Placeholder",
+      "placeholderHint": "Hint shown inside the empty field. Leave empty to use “{default}”.",
+      "display": "Show options as",
+      "displayRadio": "Radio buttons",
+      "displayDropdown": "Dropdown with search",
+      "displayHint": "Radio buttons suit up to {max} options; use a searchable dropdown for longer lists.",
+      "suggestDropdown": "{count} options: a searchable dropdown is easier to use.",
+      "suggestRadio": "Only {count, plural, one {# option} other {# options}}: radio buttons are quicker to pick.",
+      "dropdownSummary": "{count, plural, one {# option} other {# options}}, searchable",
+      "moreOptions": "+{count, plural, one {# more option} other {# more options}}",
+      "datePreview": "dd/mm/yyyy",
+      "moreOnRight": "Set the scale, stars or date limits in the panel on the right."
     }
   },
   "renderer": {
@@ -608,7 +627,9 @@
       "otherRequired": "Describe your “Other” answer.",
       "tooFewSelections": "Select more options.",
       "tooManySelections": "Select fewer options."
-    }
+    },
+    "searchOptions": "Search…",
+    "noMatches": "No matching option."
   },
   "formSettings": {
     "title": "Settings",

@@ -107,6 +107,8 @@ test.describe("respondent on a phone", () => {
     await question(p, "May we contact you")
       .getByRole("radio", { name: "No" })
       .click();
+    // Anti-spam: the page must be open for 3 s (it restarted on reload).
+    await p.waitForTimeout(3100);
     await p.getByTestId("submit-form").click();
 
     await expect(p.getByTestId("thank-you")).toBeVisible();

@@ -90,6 +90,31 @@ describe("changeQuestionType", () => {
     expect(q.required).toBe(true);
     expect(q.showIf).toEqual(text.showIf);
   });
+
+  it("keeps the placeholder only where fields show one", () => {
+    const text = question({
+      key: "p",
+      type: "short_text",
+      placeholder: "Nama lengkap",
+    });
+    expect(changeQuestionType(text, "email", labels).question.placeholder).toBe(
+      "Nama lengkap",
+    );
+    expect(
+      changeQuestionType(text, "date", labels).question.placeholder,
+    ).toBeUndefined();
+    const dropdown = question({
+      key: "d",
+      type: "dropdown",
+      options: yesNo,
+      placeholder: "Pilih kota",
+    });
+    // Radio buttons have no placeholder; switching back starts from the default.
+    expect(
+      changeQuestionType(dropdown, "multiple_choice", labels).question
+        .placeholder,
+    ).toBeUndefined();
+  });
 });
 
 describe("question and section operations", () => {

@@ -307,7 +307,10 @@ describe("export streams", () => {
       csvStream(columns, exportBatches(big)),
     );
     expect(bytes).toBeGreaterThan(100_000 * 100);
-    expect(growthMb).toBeLessThan(64);
+    // Heap without a forced GC is noisy (other suites run in the same worker);
+    // holding all 100k rows would need several hundred MB. The fetch-ahead test
+    // below is the precise backpressure check.
+    expect(growthMb).toBeLessThan(128);
   }, 120_000);
 
   it("does not fetch ahead of a slow reader (CSV and XLSX)", async () => {

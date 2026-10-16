@@ -10,12 +10,17 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowDown,
   ArrowUp,
+  CalendarDays,
+  ChevronsUpDown,
   CircleAlert,
+  CircleDot,
   Copy,
   EllipsisVertical,
   GitBranch,
   GripVertical,
+  ListFilter,
   Plus,
+  Star,
   Trash2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -23,6 +28,11 @@ import { useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,16 +41,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   addSection,
+  changeQuestionType,
   createSection,
   dependentsOf,
   duplicateQuestion,
   moveSection,
   removeQuestion,
   removeSection,
+  replaceQuestion,
+  updateQuestion,
 } from "@/lib/forms/operations";
-import { isChoiceType, type Question, type Section } from "@/lib/forms/schema";
+import {
+  LIMITS,
+  isChoiceType,
+  supportsPlaceholder,
+  type Question,
+  type QuestionType,
+  type Section,
+} from "@/lib/forms/schema";
 import { cn } from "@/lib/utils";
 import { revealItem, useBuilder } from "./builder-context";
+import { RADIO_ON } from "./choice-style";
+import { OptionsEditor } from "./options-editor";
 import { QuestionTypeIcon } from "./question-type-icon";
 
 export const SECTION_DROP_PREFIX = "section:";
@@ -265,18 +287,39 @@ function SortableQuestionCard({ question }: { question: Question }) {
 export function QuestionCard({
   question,
   handle,
+  overlay = false,
 }: {
   question: Question;
   handle?: React.ReactNode;
+  /** Drag preview: always the compact read-only view. */
+  overlay?: boolean;
 }) {
   const t = useTranslations();
   const { definition, apply, selection, select, problems } = useBuilder();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const selected =
     selection?.kind === "question" && selection.id === question.id;
+  const editing = selected && !overlay;
   const hasProblem = problems.some((p) => p.questionId === question.id);
   const dependents = dependentsOf(definition, question.key).length;
   const title = question.title || t("builder.untitledQuestion");
+
+  const badges = (
+    <span className="flex flex-wrap gap-1 empty:hidden">
+      {question.showIf && (
+        <Badge variant="secondary" className="gap-1">
+          <GitBranch className="size-3" aria-hidden />
+          {t("builder.hasLogic")}
+        </Badge>
+      )}
+      {hasProblem && (
+        <Badge variant="destructive" className="gap-1">
+          <CircleAlert className="size-3" aria-hidden />
+          {t("builder.problems.title")}
+        </Badge>
+      )}
+    </span>
+  );
 
   return (
     <div
@@ -287,53 +330,47 @@ export function QuestionCard({
       )}
       data-testid="question-card"
       data-question-id={question.id}
+      data-editing={editing || undefined}
     >
       {handle && <div className="pt-0.5">{handle}</div>}
-      <button
-        id={`item-${question.id}`}
-        type="button"
-        className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left focus-visible:outline-none"
-        onClick={() => select({ kind: "question", id: question.id })}
-        aria-label={t("builder.selectQuestion", { title })}
-        aria-pressed={selected}
-      >
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <QuestionTypeIcon type={question.type} className="size-3.5" />
-          {t(`questionTypes.${question.type}`)}
-        </span>
-        <span className="font-medium break-words">
-          {title}
-          {question.required && (
-            <span
-              className="ml-1 text-destructive"
-              title={t("builder.requiredMark")}
-            >
-              *
+      {editing ? (
+        <InlineEditor question={question} badges={badges} />
+      ) : (
+        <button
+          id={overlay ? undefined : `item-${question.id}`}
+          type="button"
+          className="flex min-w-0 flex-1 flex-col items-start gap-2 text-left focus-visible:outline-none"
+          onClick={() => {
+            select({ kind: "question", id: question.id });
+            revealItem(question.id, "focus");
+          }}
+          aria-label={t("builder.selectQuestion", { title })}
+          aria-pressed={selected}
+        >
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <QuestionTypeIcon type={question.type} className="size-3.5" />
+            {t(`questionTypes.${question.type}`)}
+          </span>
+          <span className="font-medium break-words">
+            {title}
+            {question.required && (
+              <span
+                className="ml-1 text-destructive"
+                title={t("builder.requiredMark")}
+              >
+                *
+              </span>
+            )}
+          </span>
+          {question.description && (
+            <span className="line-clamp-2 text-sm whitespace-pre-line text-muted-foreground">
+              {question.description}
             </span>
           )}
-        </span>
-        {isChoiceType(question.type) &&
-          question.options &&
-          question.options.length > 0 && (
-            <span className="line-clamp-1 text-xs text-muted-foreground">
-              {question.options.map((o) => o.label).join(" · ")}
-            </span>
-          )}
-        <span className="flex flex-wrap gap-1">
-          {question.showIf && (
-            <Badge variant="secondary" className="gap-1">
-              <GitBranch className="size-3" aria-hidden />
-              {t("builder.hasLogic")}
-            </Badge>
-          )}
-          {hasProblem && (
-            <Badge variant="destructive" className="gap-1">
-              <CircleAlert className="size-3" aria-hidden />
-              {t("builder.problems.title")}
-            </Badge>
-          )}
-        </span>
-      </button>
+          <FieldPreview question={question} />
+          {badges}
+        </button>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -394,4 +431,293 @@ export function QuestionCard({
       />
     </div>
   );
+}
+
+/** Many options read better in a searchable dropdown than as a long radio list. */
+const RADIO_RECOMMENDED_MAX = 5;
+
+/**
+ * The selected question, edited in place: title, description, placeholder,
+ * options, radio / dropdown display and "required". Everything else (type,
+ * section, validation, logic, scale) stays in the panel on the right.
+ */
+function InlineEditor({
+  question,
+  badges,
+}: {
+  question: Question;
+  badges: React.ReactNode;
+}) {
+  const t = useTranslations();
+  const { definition, apply, labels } = useBuilder();
+  const update = (patch: Partial<Question>, key?: string) =>
+    apply(
+      updateQuestion(definition, question.id, patch),
+      key ? `${question.id}:${key}` : undefined,
+    );
+  const single =
+    question.type === "multiple_choice" || question.type === "dropdown";
+  const optionCount = question.options?.length ?? 0;
+  const defaultPlaceholder =
+    question.type === "dropdown"
+      ? t("renderer.chooseOption")
+      : t("renderer.textPlaceholder");
+
+  return (
+    <div
+      id={`item-${question.id}`}
+      tabIndex={-1}
+      className="flex min-w-0 flex-1 flex-col gap-3 focus-visible:outline-none"
+      data-testid="question-editor"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <QuestionTypeIcon type={question.type} className="size-3.5" />
+          {t(`questionTypes.${question.type}`)}
+        </span>
+        {badges}
+      </div>
+
+      <Textarea
+        id="q-title"
+        data-title-input={question.id}
+        aria-label={t("builder.inspector.questionTitle")}
+        placeholder={t("builder.inspector.questionTitle")}
+        rows={1}
+        value={question.title}
+        maxLength={LIMITS.title}
+        onChange={(e) => update({ title: e.target.value }, "title")}
+        className="min-h-10 resize-none text-base font-medium md:text-base"
+      />
+      <Textarea
+        id="q-description"
+        aria-label={t("builder.inspector.descriptionLabel")}
+        placeholder={t("builder.card.descriptionPlaceholder")}
+        rows={1}
+        value={question.description ?? ""}
+        maxLength={LIMITS.description}
+        onChange={(e) =>
+          update({ description: e.target.value || undefined }, "description")
+        }
+        className="min-h-9 resize-none text-sm"
+      />
+
+      {supportsPlaceholder(question.type) && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="q-placeholder" className="text-xs">
+            {t("builder.card.placeholder")}
+          </Label>
+          <Input
+            id="q-placeholder"
+            value={question.placeholder ?? ""}
+            maxLength={LIMITS.placeholder}
+            placeholder={defaultPlaceholder}
+            onChange={(e) =>
+              update(
+                { placeholder: e.target.value || undefined },
+                "placeholder",
+              )
+            }
+            className="h-9 max-w-md"
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("builder.card.placeholderHint", { default: defaultPlaceholder })}
+          </p>
+        </div>
+      )}
+
+      {single && (
+        <div className="flex flex-col gap-1.5">
+          <span id={`display-${question.id}`} className="text-xs font-medium">
+            {t("builder.card.display")}
+          </span>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={question.type}
+            onValueChange={(v) => {
+              if (!v || v === question.type) return;
+              apply(
+                replaceQuestion(
+                  definition,
+                  changeQuestionType(question, v as QuestionType, labels)
+                    .question,
+                ),
+              );
+            }}
+            aria-labelledby={`display-${question.id}`}
+            className="w-full max-w-md"
+            data-testid="choice-display"
+          >
+            <ToggleGroupItem
+              value="multiple_choice"
+              className={cn("flex-1 gap-1.5", RADIO_ON)}
+            >
+              <CircleDot aria-hidden />
+              {t("builder.card.displayRadio")}
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="dropdown"
+              className={cn("flex-1 gap-1.5", RADIO_ON)}
+            >
+              <ListFilter aria-hidden />
+              {t("builder.card.displayDropdown")}
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <p className="text-xs text-muted-foreground">
+            {question.type === "multiple_choice" &&
+            optionCount > RADIO_RECOMMENDED_MAX
+              ? t("builder.card.suggestDropdown", { count: optionCount })
+              : question.type === "dropdown" &&
+                  optionCount <= RADIO_RECOMMENDED_MAX
+                ? t("builder.card.suggestRadio", { count: optionCount })
+                : t("builder.card.displayHint", {
+                    max: RADIO_RECOMMENDED_MAX,
+                  })}
+          </p>
+        </div>
+      )}
+
+      {isChoiceType(question.type) && (
+        <OptionsEditor question={question} update={update} />
+      )}
+
+      {!isChoiceType(question.type) && !supportsPlaceholder(question.type) && (
+        <div className="flex flex-col gap-1.5">
+          <FieldPreview question={question} />
+          <p className="text-xs text-muted-foreground">
+            {t("builder.card.moreOnRight")}
+          </p>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 border-t pt-3">
+        <Switch
+          id="q-required"
+          checked={question.required}
+          onCheckedChange={(required) => update({ required })}
+        />
+        <Label htmlFor="q-required">{t("builder.inspector.required")}</Label>
+      </div>
+    </div>
+  );
+}
+
+/** What respondents will see, drawn small and inert (not a real control). */
+function FieldPreview({ question }: { question: Question }) {
+  const t = useTranslations();
+  const box =
+    "flex w-full max-w-md items-center rounded-md border border-dashed bg-background/60 px-3 text-sm text-muted-foreground";
+  const placeholder = question.placeholder?.trim();
+  const options = question.options ?? [];
+  const shown = options.slice(0, RADIO_RECOMMENDED_MAX);
+
+  switch (question.type) {
+    case "short_text":
+    case "email":
+    case "phone":
+    case "number":
+      return (
+        <span aria-hidden className={cn(box, "h-9")}>
+          {placeholder || t("renderer.textPlaceholder")}
+        </span>
+      );
+    case "paragraph":
+      return (
+        <span aria-hidden className={cn(box, "h-16 items-start py-2")}>
+          {placeholder || t("renderer.textPlaceholder")}
+        </span>
+      );
+    case "date":
+      return (
+        <span aria-hidden className={cn(box, "h-9 max-w-48 justify-between")}>
+          {t("builder.card.datePreview")}
+          <CalendarDays className="size-4" />
+        </span>
+      );
+    case "dropdown":
+      return (
+        <span aria-hidden className="flex w-full max-w-md flex-col gap-1">
+          <span className={cn(box, "h-9 justify-between")}>
+            {placeholder || t("renderer.chooseOption")}
+            <ChevronsUpDown className="size-4" />
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {t("builder.card.dropdownSummary", { count: options.length })}
+          </span>
+        </span>
+      );
+    case "multiple_choice":
+    case "checkboxes":
+      return (
+        <span aria-hidden className="flex flex-col gap-1.5">
+          {shown.map((o) => (
+            <span key={o.id} className="flex items-center gap-2 text-sm">
+              <span
+                className={cn(
+                  "size-4 shrink-0 border-2 border-muted-foreground/50",
+                  question.type === "checkboxes"
+                    ? "rounded-[4px]"
+                    : "rounded-full",
+                )}
+              />
+              <span className="line-clamp-1">{o.label || "—"}</span>
+            </span>
+          ))}
+          {options.length > shown.length && (
+            <span className="pl-6 text-xs text-muted-foreground">
+              {t("builder.card.moreOptions", {
+                count: options.length - shown.length,
+              })}
+            </span>
+          )}
+          {question.allowOther && (
+            <span className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span
+                className={cn(
+                  "size-4 shrink-0 border-2 border-muted-foreground/50",
+                  question.type === "checkboxes"
+                    ? "rounded-[4px]"
+                    : "rounded-full",
+                )}
+              />
+              {t("builder.other")}
+            </span>
+          )}
+        </span>
+      );
+    case "rating":
+      return (
+        <span aria-hidden className="flex gap-0.5 text-muted-foreground/60">
+          {Array.from({ length: question.rating?.max ?? 5 }, (_, i) => (
+            <Star key={i} className="size-5" />
+          ))}
+        </span>
+      );
+    case "linear_scale": {
+      const min = question.scale?.min ?? 1;
+      const max = question.scale?.max ?? 5;
+      return (
+        <span aria-hidden className="flex flex-col gap-1">
+          <span className="flex flex-wrap gap-1">
+            {Array.from({ length: max - min + 1 }, (_, i) => (
+              <span
+                key={i}
+                className="flex size-7 items-center justify-center rounded border border-dashed text-xs text-muted-foreground"
+              >
+                {min + i}
+              </span>
+            ))}
+          </span>
+          {(question.scale?.minLabel || question.scale?.maxLabel) && (
+            <span className="flex max-w-md justify-between gap-4 text-xs text-muted-foreground">
+              <span>{question.scale?.minLabel}</span>
+              <span>{question.scale?.maxLabel}</span>
+            </span>
+          )}
+        </span>
+      );
+    }
+  }
 }

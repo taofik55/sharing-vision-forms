@@ -63,12 +63,16 @@ test("editor builds from a template, adds logic, previews and publishes twice", 
     .filter({ hasText: "Untitled question" });
   await expect(newCard).toHaveCount(1);
 
-  // Edit it in the inspector
+  // The new card opens for editing with its title focused and selected:
+  // typing replaces "Untitled question".
   const title = page.locator("#q-title");
-  await title.fill("How was the venue?");
+  await expect(title).toBeFocused();
+  await page.keyboard.type("How was the venue?");
+  await expect(newCard).toHaveCount(0);
   await expect(
-    page.getByTestId("section-drop-2").getByText("How was the venue?"),
-  ).toBeVisible();
+    page.getByTestId("section-drop-2").getByTestId("question-editor"),
+  ).toHaveCount(1);
+  await expect(title).toHaveValue("How was the venue?");
 
   // Logic: show only if Ticket type is VIP
   await page.getByTestId("logic-enable").click();
@@ -78,7 +82,8 @@ test("editor builds from a template, adds logic, previews and publishes twice", 
     condition.getByRole("combobox", { name: "Question" }),
     "Ticket type",
   );
-  await pick(page, condition.getByRole("combobox", { name: "Operator" }), "is");
+  // Few operators: radio buttons.
+  await condition.getByRole("radio", { name: "is", exact: true }).click();
   await pick(page, condition.getByRole("combobox", { name: "Value" }), "VIP");
   await expect(
     page.getByTestId("section-drop-2").getByText("Has logic"),
@@ -285,4 +290,67 @@ test("warns when another editor saved a newer draft", async ({
     "Saved by tab B",
   );
   await other.context().close();
+});
+
+test("cards are edited in place: placeholder, radio or searchable dropdown", async ({
+  page,
+}) => {
+  await login(page, "editor@formpulse.test");
+  await page.goto("/en/forms");
+  await page.getByTestId("create-form").click();
+  await page.getByTestId("create-form-confirm").click(); // Blank
+  await expect(page).toHaveURL(/\/builder$/, { timeout: 45_000 });
+
+  // Short answer with a custom placeholder, edited on the card.
+  await page
+    .getByTestId("question-card")
+    .first()
+    .getByRole("button", { name: /Edit question/ })
+    .click();
+  await page.locator("#q-title").fill("Full name");
+  await page.locator("#q-placeholder").fill("e.g. Budi Santoso");
+
+  // A single-choice question with many options becomes a searchable dropdown.
+  await page.getByTestId("palette-multiple_choice").click();
+  await page.keyboard.type("City");
+  const editor = page.getByTestId("question-editor");
+  for (const city of [
+    "Bandung",
+    "Jakarta",
+    "Surabaya",
+    "Medan",
+    "Makassar",
+    "Denpasar",
+  ]) {
+    await editor.getByRole("button", { name: "Add option" }).click();
+    await editor
+      .getByRole("textbox", { name: /Option \d+ label/ })
+      .last()
+      .fill(city);
+  }
+  await expect(editor).toContainText("a searchable dropdown is easier");
+  await editor
+    .getByTestId("choice-display")
+    .getByRole("radio", { name: /Dropdown/ })
+    .click();
+  await expect(
+    page.getByRole("combobox", { name: "Question type" }),
+  ).toContainText("Dropdown");
+
+  // The other card shows a preview with the custom placeholder.
+  await expect(page.getByTestId("question-card").first()).toContainText(
+    "e.g. Budi Santoso",
+  );
+
+  // Respondents type to filter the dropdown.
+  await page.getByTestId("preview-button").click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByPlaceholder("e.g. Budi Santoso")).toBeVisible();
+  await dialog.getByRole("combobox", { name: "City" }).click();
+  await page.getByPlaceholder("Search…").fill("sura");
+  await expect(page.getByRole("option")).toHaveCount(1);
+  await page.getByRole("option", { name: "Surabaya" }).click();
+  await expect(dialog.getByRole("combobox", { name: "City" })).toContainText(
+    "Surabaya",
+  );
 });

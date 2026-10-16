@@ -5,6 +5,7 @@
 import { customAlphabet } from "nanoid";
 import {
   isChoiceType,
+  supportsPlaceholder,
   type FormDefinition,
   type Option,
   type Question,
@@ -59,6 +60,7 @@ function applyTypeDefaults(
   else delete q.scale;
   if (q.type === "rating") q.rating ??= { max: 5 };
   else delete q.rating;
+  if (!supportsPlaceholder(q.type)) delete q.placeholder;
   return q;
 }
 

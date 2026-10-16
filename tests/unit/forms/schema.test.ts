@@ -52,6 +52,19 @@ describe("formDefinitionSchema (structure)", () => {
   });
 });
 
+describe("placeholder", () => {
+  it("is optional, up to 200 characters", () => {
+    const ok = form(
+      question({ key: "a", type: "short_text", placeholder: "Contoh: Budi" }),
+    );
+    expect(formDefinitionSchema.safeParse(ok).success).toBe(true);
+    const tooLong = form(
+      question({ key: "a", type: "short_text", placeholder: "x".repeat(201) }),
+    );
+    expect(formDefinitionSchema.safeParse(tooLong).success).toBe(false);
+  });
+});
+
 describe("validateDefinition", () => {
   it("passes a valid form", () => {
     expect(

@@ -186,7 +186,8 @@ export function Builder(props: BuilderProps) {
       }
       apply(addQuestion(definition, where.sectionId, question, where.index));
       setSelection({ kind: "question", id: question.id });
-      revealItem(question.id);
+      // Edit right in the new card: the title is focused and selected.
+      revealItem(question.id, "select");
     },
     [apply, definition, labels, selection],
   );
@@ -482,7 +483,7 @@ export function Builder(props: BuilderProps) {
             )}
             {draggedQuestion && (
               <div className="shadow-lg">
-                <QuestionCard question={draggedQuestion} />
+                <QuestionCard question={draggedQuestion} overlay />
               </div>
             )}
           </DragOverlay>

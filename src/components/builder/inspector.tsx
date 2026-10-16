@@ -2,19 +2,14 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { Combobox } from "@/components/combobox";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   changeQuestionType,
   findQuestion,
@@ -27,16 +22,59 @@ import {
 import {
   LIMITS,
   QUESTION_TYPES,
-  isChoiceType,
   type Question,
   type QuestionType,
   type Section,
   type ValidationRules,
 } from "@/lib/forms/schema";
 import { useBuilder } from "./builder-context";
+import { cn } from "@/lib/utils";
+import { RADIO_ON } from "./choice-style";
 import { LogicEditor } from "./logic-editor";
-import { OptionsEditor } from "./options-editor";
 import { QuestionTypeIcon } from "./question-type-icon";
+
+/** Few fixed choices (3 to 10 stars, scale ends): radio buttons, not a dropdown. */
+function NumberChoice({
+  id,
+  label,
+  values,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  values: number[];
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span id={id} className="text-sm leading-none font-medium">
+        {label}
+      </span>
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        size="sm"
+        value={String(value)}
+        onValueChange={(v) => v && onChange(Number(v))}
+        aria-labelledby={id}
+        className="flex-wrap justify-start"
+        spacing={1}
+      >
+        {values.map((n) => (
+          <ToggleGroupItem
+            key={n}
+            value={String(n)}
+            className={cn("h-8 min-w-8 px-2 tabular-nums", RADIO_ON)}
+          >
+            {n}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </div>
+  );
+}
 
 export function Inspector() {
   const t = useTranslations("builder.inspector");
@@ -136,97 +174,58 @@ function QuestionInspector({
 
   return (
     <div className="flex flex-col gap-4" data-testid="question-inspector">
+      <div>
+        <h2 className="text-sm font-semibold">
+          {t("builder.inspector.advanced")}
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          {t("builder.inspector.advancedHint")}
+        </p>
+      </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="q-title">{t("builder.inspector.questionTitle")}</Label>
-        <Textarea
-          id="q-title"
-          rows={2}
-          value={question.title}
-          maxLength={LIMITS.title}
-          onChange={(e) => update({ title: e.target.value }, "title")}
+        <Label htmlFor="q-type">{t("builder.inspector.type")}</Label>
+        <Combobox
+          id="q-type"
+          value={question.type}
+          onChange={(v) => changeType(v as QuestionType)}
+          options={QUESTION_TYPES.map((type) => ({
+            value: type,
+            label: t(`questionTypes.${type}`),
+            icon: <QuestionTypeIcon type={type} />,
+          }))}
+          placeholder={t("builder.inspector.type")}
+          searchPlaceholder={t("builder.search")}
+          emptyText={t("builder.noMatches")}
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="q-description">
-          {t("builder.inspector.descriptionLabel")}
+        <Label htmlFor="q-section">
+          {t("builder.inspector.moveToSection")}
         </Label>
-        <Textarea
-          id="q-description"
-          rows={2}
-          value={question.description ?? ""}
-          maxLength={LIMITS.description}
-          onChange={(e) =>
-            update({ description: e.target.value || undefined }, "description")
-          }
+        <Combobox
+          id="q-section"
+          value={sectionId}
+          onChange={(target) => {
+            const to = definition.sections.find((s) => s.id === target);
+            if (to && target !== sectionId)
+              apply(
+                moveQuestion(
+                  definition,
+                  question.id,
+                  target,
+                  to.questions.length,
+                ),
+              );
+          }}
+          options={definition.sections.map((s, i) => ({
+            value: s.id,
+            label: `${i + 1}. ${s.title || t("builder.section.titlePlaceholder")}`,
+          }))}
+          placeholder={t("builder.inspector.moveToSection")}
+          searchPlaceholder={t("builder.search")}
+          emptyText={t("builder.noMatches")}
         />
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="q-type">{t("builder.inspector.type")}</Label>
-          <Select
-            value={question.type}
-            onValueChange={(v) => changeType(v as QuestionType)}
-          >
-            <SelectTrigger id="q-type" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {QUESTION_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  <QuestionTypeIcon type={type} />
-                  {t(`questionTypes.${type}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="q-section">
-            {t("builder.inspector.moveToSection")}
-          </Label>
-          <Select
-            value={sectionId}
-            onValueChange={(target) => {
-              const to = definition.sections.find((s) => s.id === target);
-              if (to)
-                apply(
-                  moveQuestion(
-                    definition,
-                    question.id,
-                    target,
-                    to.questions.length,
-                  ),
-                );
-            }}
-          >
-            <SelectTrigger id="q-section" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {definition.sections.map((s, i) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {i + 1}. {s.title || t("builder.section.titlePlaceholder")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <Label htmlFor="q-required">{t("builder.inspector.required")}</Label>
-        <Switch
-          id="q-required"
-          checked={question.required}
-          onCheckedChange={(required) => update({ required })}
-        />
-      </div>
-
-      {isChoiceType(question.type) && (
-        <>
-          <Separator />
-          <OptionsEditor question={question} update={update} />
-        </>
-      )}
 
       {question.type === "linear_scale" && (
         <>
@@ -238,24 +237,13 @@ function QuestionInspector({
       {question.type === "rating" && (
         <>
           <Separator />
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="q-rating">{t("builder.inspector.ratingMax")}</Label>
-            <Select
-              value={String(question.rating?.max ?? 5)}
-              onValueChange={(v) => update({ rating: { max: Number(v) } })}
-            >
-              <SelectTrigger id="q-rating" className="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {range(3, 10).map((n) => (
-                  <SelectItem key={n} value={String(n)}>
-                    {n}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <NumberChoice
+            id="q-rating"
+            label={t("builder.inspector.ratingMax")}
+            values={range(3, 10)}
+            value={question.rating?.max ?? 5}
+            onChange={(max) => update({ rating: { max } })}
+          />
         </>
       )}
 
@@ -314,45 +302,20 @@ function ScaleSettings({
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-semibold">{t("scale")}</h3>
-      <div className="flex items-end gap-3">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="scale-min">{t("scaleFrom")}</Label>
-          <Select
-            value={String(scale.min)}
-            onValueChange={(v) =>
-              update({ scale: { ...scale, min: Number(v) as 0 | 1 } })
-            }
-          >
-            <SelectTrigger id="scale-min" className="w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">0</SelectItem>
-              <SelectItem value="1">1</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="scale-max">{t("scaleTo")}</Label>
-          <Select
-            value={String(scale.max)}
-            onValueChange={(v) =>
-              update({ scale: { ...scale, max: Number(v) } })
-            }
-          >
-            <SelectTrigger id="scale-max" className="w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {range(3, 10).map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <NumberChoice
+        id="scale-min"
+        label={t("scaleFrom")}
+        values={[0, 1]}
+        value={scale.min}
+        onChange={(min) => update({ scale: { ...scale, min: min as 0 | 1 } })}
+      />
+      <NumberChoice
+        id="scale-max"
+        label={t("scaleTo")}
+        values={range(3, 10)}
+        value={scale.max}
+        onChange={(max) => update({ scale: { ...scale, max } })}
+      />
       {(["minLabel", "maxLabel"] as const).map((field) => (
         <div key={field} className="flex flex-col gap-2">
           <Label htmlFor={`scale-${field}`}>{t(field)}</Label>

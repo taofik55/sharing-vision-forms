@@ -37,6 +37,15 @@ export const TEXT_TYPES = [
   "phone",
 ] as const;
 export const NUMERIC_TYPES = ["number", "rating", "linear_scale"] as const;
+/** Types with a placeholder (hint text inside an empty field). */
+export const PLACEHOLDER_TYPES = [
+  "short_text",
+  "paragraph",
+  "email",
+  "phone",
+  "number",
+  "dropdown",
+] as const;
 
 export const CONDITION_OPERATORS = [
   "equals",
@@ -62,6 +71,7 @@ export const LIMITS = {
   optionLabel: 300,
   pattern: 200,
   scaleLabel: 100,
+  placeholder: 200,
 } as const;
 
 export function isChoiceType(type: QuestionType): type is ChoiceType {
@@ -72,6 +82,9 @@ export function isTextType(type: QuestionType): boolean {
 }
 export function isNumericType(type: QuestionType): boolean {
   return (NUMERIC_TYPES as readonly string[]).includes(type);
+}
+export function supportsPlaceholder(type: QuestionType): boolean {
+  return (PLACEHOLDER_TYPES as readonly string[]).includes(type);
 }
 
 /** Operators that make sense for a referenced question of this type. */
@@ -156,6 +169,8 @@ export const questionSchema = z.strictObject({
   type: z.enum(QUESTION_TYPES),
   title: z.string().max(LIMITS.title),
   description: z.string().max(LIMITS.description).optional(),
+  /** Hint inside the empty field; the renderer falls back to "Your answer" / "Choose". */
+  placeholder: z.string().max(LIMITS.placeholder).optional(),
   required: z.boolean(),
   options: z.array(optionSchema).max(LIMITS.options).optional(),
   allowOther: z.boolean().optional(),

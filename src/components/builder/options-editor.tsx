@@ -31,6 +31,35 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { moveOption, newId, optionsFromLines } from "@/lib/forms/operations";
 import { LIMITS, type Option, type Question } from "@/lib/forms/schema";
+import { cn } from "@/lib/utils";
+
+/** Marker before each option: what respondents will see. */
+function OptionMarker({
+  type,
+  index,
+}: {
+  type: Question["type"];
+  index: number;
+}) {
+  if (type === "dropdown")
+    return (
+      <span
+        className="w-5 shrink-0 text-right text-xs text-muted-foreground tabular-nums"
+        aria-hidden
+      >
+        {index + 1}.
+      </span>
+    );
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "size-4 shrink-0 border-2 border-muted-foreground/50",
+        type === "checkboxes" ? "rounded-[4px]" : "rounded-full",
+      )}
+    />
+  );
+}
 
 type OptionsEditorProps = {
   question: Question;
@@ -77,6 +106,7 @@ export function OptionsEditor({ question, update }: OptionsEditorProps) {
                 key={option.id}
                 option={option}
                 index={index}
+                type={question.type}
                 onChange={(label) =>
                   setOptions(
                     options.map((o) =>
@@ -163,11 +193,13 @@ export function OptionsEditor({ question, update }: OptionsEditorProps) {
 function OptionRow({
   option,
   index,
+  type,
   onChange,
   onRemove,
 }: {
   option: Option;
   index: number;
+  type: Question["type"];
   onChange: (label: string) => void;
   onRemove: () => void;
 }) {
@@ -198,6 +230,7 @@ function OptionRow({
       >
         <GripVertical className="size-4" aria-hidden />
       </button>
+      <OptionMarker type={type} index={index} />
       <Input
         value={option.label}
         maxLength={LIMITS.optionLabel}

@@ -33,11 +33,24 @@ export function useBuilder(): BuilderContextValue {
   return ctx;
 }
 
-/** Scrolls the canvas card of a question/section into view and focuses it. */
-export function revealItem(id: string) {
+/**
+ * Scrolls the canvas card of a question/section into view and focuses it.
+ * `title`: focus the inline title field instead ("select" also selects its
+ * text, so typing replaces "Untitled question" right after adding).
+ */
+export function revealItem(id: string, title?: "focus" | "select") {
   requestAnimationFrame(() => {
     const el = document.getElementById(`item-${id}`);
     el?.scrollIntoView({ block: "center", behavior: "smooth" });
-    el?.focus({ preventScroll: true });
+    const input = title
+      ? document.querySelector<HTMLTextAreaElement>(
+          `[data-title-input="${CSS.escape(id)}"]`,
+        )
+      : null;
+    if (input) {
+      input.focus({ preventScroll: true });
+      if (title === "select") input.select();
+      else input.setSelectionRange(input.value.length, input.value.length);
+    } else el?.focus({ preventScroll: true });
   });
 }

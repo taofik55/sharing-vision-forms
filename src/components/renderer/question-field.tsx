@@ -3,17 +3,11 @@
 import { Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useId } from "react";
+import { Combobox } from "@/components/combobox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   isChoiceAnswer,
@@ -163,6 +157,8 @@ function Control({
 
   // 44px targets and 16px text on phones (prevents iOS zoom on focus).
   const big = "h-11 text-base md:text-sm";
+  // Custom hint from the builder, else "Your answer".
+  const placeholder = q.placeholder?.trim() || t("textPlaceholder");
 
   switch (q.type) {
     case "short_text":
@@ -171,7 +167,7 @@ function Control({
           {...common}
           className={big}
           value={text}
-          placeholder={t("textPlaceholder")}
+          placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
         />
       );
@@ -183,6 +179,7 @@ function Control({
           type="email"
           autoComplete="email"
           value={text}
+          placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
         />
       );
@@ -194,6 +191,7 @@ function Control({
           type="tel"
           autoComplete="tel"
           value={text}
+          placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
         />
       );
@@ -204,7 +202,7 @@ function Control({
           className="text-base md:text-sm"
           rows={4}
           value={text}
-          placeholder={t("textPlaceholder")}
+          placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
         />
       );
@@ -218,6 +216,7 @@ function Control({
           max={q.validation?.max}
           step={q.validation?.integerOnly ? 1 : "any"}
           value={text}
+          placeholder={placeholder}
           className={cn(big, "max-w-xs")}
           onChange={(e) =>
             onChange(e.target.value === "" ? undefined : Number(e.target.value))
@@ -307,31 +306,27 @@ function ChoiceControl({
   );
 
   if (q.type === "dropdown") {
+    // Searchable when the list is long (type to filter).
     return (
       <div className="flex flex-col gap-2">
-        <Select
-          value={selected[0] ?? ""}
-          onValueChange={(v) => set(v ? [v] : [])}
-        >
-          <SelectTrigger
-            id={inputId}
-            aria-describedby={describedBy}
-            aria-invalid={invalid || undefined}
-            className="h-11! w-full max-w-sm text-base md:text-sm"
-          >
-            <SelectValue placeholder={t("chooseOption")} />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((o) => (
-              <SelectItem key={o.id} value={o.id}>
-                {o.label}
-              </SelectItem>
-            ))}
-            {q.allowOther && (
-              <SelectItem value={OTHER_OPTION_ID}>{tb("other")}</SelectItem>
-            )}
-          </SelectContent>
-        </Select>
+        <Combobox
+          id={inputId}
+          aria-describedby={describedBy}
+          aria-invalid={invalid}
+          value={selected[0]}
+          onChange={(v) => set([v])}
+          options={[
+            ...options.map((o) => ({ value: o.id, label: o.label })),
+            ...(q.allowOther
+              ? [{ value: OTHER_OPTION_ID, label: tb("other") }]
+              : []),
+          ]}
+          placeholder={q.placeholder?.trim() || t("chooseOption")}
+          searchPlaceholder={t("searchOptions")}
+          emptyText={t("noMatches")}
+          searchable
+          className="h-11 max-w-sm text-base md:text-sm"
+        />
         {otherInput}
       </div>
     );
