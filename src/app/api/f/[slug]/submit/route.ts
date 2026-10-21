@@ -124,7 +124,6 @@ export async function POST(
   // 2. Anti-spam. Honeypot: pretend success and drop it.
   if (payload.honeypot) return ok(randomUUID());
   const now = Date.now();
-  if (now - payload.startedAt < MIN_FILL_MS) return fail("TOO_FAST", locale);
 
   // 3. Form must exist and be open (server is authoritative).
   const form = await findFormForRespondent(slug);
@@ -184,6 +183,9 @@ export async function POST(
     if (soError || !screenoutId) return fail("SERVER_ERROR", locale);
     return ok(screenoutId, false, true);
   }
+
+  // Too fast to be a person (screen-outs above may legitimately end in seconds).
+  if (now - payload.startedAt < MIN_FILL_MS) return fail("TOO_FAST", locale);
 
   // 5. Validate: hidden questions and unknown keys are dropped; text capped.
   const photos = extractPhotos(definition, answers);

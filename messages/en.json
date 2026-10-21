@@ -742,7 +742,10 @@
     "screenOutCode": "Screen-out at {code}.",
     "screenOutDefault": "The interview was ended by a screening rule.",
     "screenOutSubmit": "End interview (screen-out)",
-    "screenOutDone": "Thank you for your time. You are not in the target group of this survey."
+    "screenOutDone": "Thank you for your time. You are not in the target group of this survey.",
+    "screenOutRespondentTitle": "This survey is not a fit for you",
+    "screenOutRespondent": "Based on this answer, you are not in the target group of this survey. Press Finish to end.",
+    "screenOutRespondentSubmit": "Finish"
   },
   "formSettings": {
     "title": "Settings",

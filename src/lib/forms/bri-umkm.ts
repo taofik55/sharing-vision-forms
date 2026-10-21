@@ -1844,3 +1844,75 @@ export function briUmkmCapiSettings(): CapiSettings {
 }
 
 export const briKey = key;
+
+// -----------------------------------------------------------------------------
+// Self-administered version (public link, no login, no interviewer)
+// -----------------------------------------------------------------------------
+
+export const BRI_SELF_TITLE = `${BRI_TITLE} (Isi Mandiri)`;
+export const BRI_SELF_DESCRIPTION =
+  "Survei untuk pemilik atau pengelola UMKM Retail & F&B tentang layanan perbankan dan pembayaran digital (±20 menit). Diselenggarakan oleh PT Sharing Vision Indonesia untuk PT Bank Rakyat Indonesia (Persero) Tbk.";
+
+/** Interviewer-only questions: observation, gift, GPS and photo of the shop. */
+const INTERVIEWER_ONLY = ["J3a", "J4_GPS", "J4", "J4_FOTO", "J5", "J6"].map(
+  key,
+);
+
+/** Respondent-facing section titles and descriptions. */
+const SELF_SECTIONS: Record<string, [string, string?]> = {
+  sec_s: [
+    "Kualifikasi",
+    "Beberapa pertanyaan singkat untuk memastikan survei ini sesuai dengan usaha Bapak/Ibu.",
+  ],
+  sec_a: ["Profil Usaha"],
+  sec_b: ["Penggunaan Bank"],
+  sec_c: ["Pembayaran Digital, QRIS & EDC"],
+  sec_d: ["Penyimpanan Dana & Pembayaran Gaji"],
+  sec_e: ["Pinjaman"],
+  sec_f: ["Investasi"],
+  sec_g: [
+    "Kepentingan & Kepuasan",
+    "Setiap hal dinilai dua kali: seberapa penting bagi usaha Bapak/Ibu, lalu seberapa puas dengan bank [S5].",
+  ],
+  sec_h: ["Pandangan terhadap Bank"],
+  sec_i: [
+    "Konsep Layanan Baru",
+    `Bacalah enam konsep layanan berikut, lalu nilai masing-masing.\n\n${CONCEPT_CARDS.split("\n").slice(1).join("\n")}`,
+  ],
+  sec_j: ["Tentang Bapak/Ibu & Penutup"],
+};
+
+/** "… [kartu skala 1–7]", "… (dicatat surveyor)" → plain question text. */
+const selfText = (text: string) =>
+  text
+    .replace(/\s*\[kartu[^\]]*\]/gi, "")
+    .replace(/\s*\((dicatat|observasi) surveyor\)/gi, "")
+    .trim();
+
+/**
+ * The questionnaire filled in by the business owner on a public link: same
+ * question keys, codes and logic as the interview version, without
+ * interviewer notes, show-card cues and observation questions.
+ */
+export function briUmkmSelfDefinition(): FormDefinition {
+  const def = briUmkmDefinition();
+  return {
+    ...def,
+    sections: def.sections.map((s) => {
+      const [title, description] = SELF_SECTIONS[s.id] ?? [s.title];
+      return {
+        ...s,
+        title,
+        description,
+        questions: s.questions
+          .filter((q) => !INTERVIEWER_ONLY.includes(q.key))
+          .map((q) => {
+            const copy: Question = { ...q, title: selfText(q.title) };
+            delete copy.noteRequired;
+            if (q.key === key("S10")) delete copy.description;
+            return copy;
+          }),
+      };
+    }),
+  };
+}

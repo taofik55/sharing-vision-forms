@@ -542,3 +542,11 @@ Source: `Draft Finalisasi Kuesioner Survei Layanan UMKM BRI.pdf` (draft v0.3, 15
 - [ ] Responses: respondent ID / surveyor columns; drawer shows notes, GPS and photo; CSV export with option codes.
 - [ ] Settings: change the quota target or a dimension; builder: edit the rule on S1 and the grid G2.
 - [ ] Hosted project: push `20261021090000_capi_roles.sql` and `20261021090100_capi_toolkit.sql` before using interview mode.
+
+### Follow-up (2026-10-21): self-administered BRI questionnaire
+
+- `briUmkmSelfDefinition()` (`src/lib/forms/bri-umkm.ts`): the same questions, keys, codes and logic for a public link (no login, interview mode off), without interviewer parts: show-card cues (`[kartu skala]`), "(dicatat / observasi surveyor)", required surveyor notes, and the observation questions J3a, J4, J4_GPS, J4_FOTO, J5, J6; respondent-facing section titles; concept cards listed in module I.
+- `pnpm seed:bri` creates it as `survei-umkm-bri-mandiri` (published, no answers). Without `--reset` only missing forms are created.
+- Screen-out notice on public forms now speaks to the respondent ("Survei ini belum sesuai untuk Anda", button "Selesai"); interviews and the builder preview keep the interviewer wording (`audience` prop on `FormPages`).
+- Fix: a respondent screened out within seconds was refused as "too fast"; the minimum fill time now applies only to complete responses.
+- Tests: unit (self definition valid, no interviewer text, same keys, S1 screen-out), e2e `tests/e2e/self-form.spec.ts`.

@@ -742,7 +742,10 @@
     "screenOutCode": "Screen-out pada {code}.",
     "screenOutDefault": "Wawancara dihentikan oleh aturan penyaringan.",
     "screenOutSubmit": "Akhiri wawancara (screen-out)",
-    "screenOutDone": "Terima kasih atas waktunya. Anda tidak termasuk kriteria responden survei ini."
+    "screenOutDone": "Terima kasih atas waktunya. Anda tidak termasuk kriteria responden survei ini.",
+    "screenOutRespondentTitle": "Survei ini belum sesuai untuk Anda",
+    "screenOutRespondent": "Berdasarkan jawaban ini, Anda tidak termasuk kriteria responden survei. Tekan Selesai untuk mengakhiri.",
+    "screenOutRespondentSubmit": "Selesai"
   },
   "formSettings": {
     "title": "Pengaturan",

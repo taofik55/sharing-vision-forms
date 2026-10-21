@@ -1,7 +1,7 @@
 /**
  * BRI UMKM survey (Kuesioner Survei Layanan UMKM BRI, draft v0.3):
- *   pnpm seed:bri                  # both forms; skips a form that already exists
- *   pnpm seed:bri --reset          # delete and recreate both forms
+ *   pnpm seed:bri                  # all three forms; skips a form that already exists
+ *   pnpm seed:bri --reset          # delete and recreate the three forms
  *   pnpm seed:bri --n 300          # sample interviews in the "contoh" form
  *   pnpm seed:bri --allow-remote   # non-local project (think twice)
  *
@@ -9,16 +9,21 @@
  *   1. "survei-umkm-bri"        the questionnaire, published, interview mode, no answers;
  *   2. "survei-umkm-bri-contoh" the same questionnaire with N sample interviews
  *      (default 300) by five surveyors (one per city), ~15 per quota cell,
- *      plus screen-outs, QC flags, a backcheck sample, approvals and rejects.
+ *      plus screen-outs, QC flags, a backcheck sample, approvals and rejects;
+ *   3. "survei-umkm-bri-mandiri" self-administered version on a public link
+ *      (no login, no interview mode, no interviewer questions), no answers.
  * Surveyor accounts surveyor.<city>@formpulse.test (password Password123!)
- * are created and assigned to both forms.
+ * are created and assigned to the two interview forms.
  */
 import { randomUUID } from "node:crypto";
 import {
   BRI_DESCRIPTION,
+  BRI_SELF_DESCRIPTION,
+  BRI_SELF_TITLE,
   BRI_TITLE,
   briUmkmCapiSettings,
   briUmkmDefinition,
+  briUmkmSelfDefinition,
 } from "../src/lib/forms/bri-umkm";
 import { qcFlags, quotaCell } from "../src/lib/forms/capi";
 import { prepareAnswers } from "../src/lib/forms/submission";
@@ -37,6 +42,7 @@ type Admin = ReturnType<typeof createAdminClient>;
 const PASSWORD = "Password123!";
 const SLUG = "survei-umkm-bri";
 const SAMPLE_SLUG = "survei-umkm-bri-contoh";
+const SELF_SLUG = "survei-umkm-bri-mandiri";
 
 function arg(name: string, fallback: number): number {
   const i = process.argv.indexOf(`--${name}`);
@@ -113,6 +119,8 @@ async function createForm(
   slug: string,
   title: string,
   ownerProfile: { id: string; workspace_id: string },
+  // Self-administered: public link, no interview mode.
+  self = false,
 ): Promise<{ id: string; versionId: string } | null> {
   const reset = process.argv.includes("--reset");
   const { data: existing } = await admin
@@ -129,19 +137,23 @@ async function createForm(
     }
     await admin.from("forms").delete().eq("id", existing.id);
   }
-  const definition = briUmkmDefinition() as unknown as NonNullable<Json>;
+  const definition = (self
+    ? briUmkmSelfDefinition()
+    : briUmkmDefinition()) as unknown as NonNullable<Json>;
   const { data: form, error } = await admin
     .from("forms")
     .insert({
       workspace_id: ownerProfile.workspace_id,
       owner_id: ownerProfile.id,
       title,
-      description: BRI_DESCRIPTION,
+      description: self ? BRI_SELF_DESCRIPTION : BRI_DESCRIPTION,
       slug,
       draft_definition: definition,
       thank_you_message: "Terima kasih atas waktu dan jawaban Bapak/Ibu.",
       closed_message: "Pengumpulan data survei ini sudah selesai.",
-      capi_settings: briUmkmCapiSettings() as unknown as NonNullable<Json>,
+      capi_settings: (self
+        ? {}
+        : briUmkmCapiSettings()) as unknown as NonNullable<Json>,
     })
     .select("id")
     .single();
@@ -163,6 +175,34 @@ async function createForm(
     .eq("id", form.id);
   if (pError) throw pError;
   return { id: form.id, versionId: version.id };
+}
+
+/**
+ * Retries a Supabase call when the network drops (hosted projects). Safe for
+ * submit_response / record_screenout: the submission token makes them idempotent.
+ */
+async function withRetry<T extends { error: { message: string } | null }>(
+  call: () => PromiseLike<T>,
+  tries = 5,
+): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    let result: T | undefined;
+    let thrown: unknown;
+    try {
+      result = await call();
+    } catch (e) {
+      thrown = e;
+    }
+    const message = thrown ? String(thrown) : (result?.error?.message ?? "");
+    const network =
+      /fetch failed|ECONNRESET|ETIMEDOUT|socket|network|timeout/i.test(message);
+    if ((!thrown && !network) || attempt >= tries) {
+      if (thrown) throw thrown;
+      return result!;
+    }
+    console.warn(`  network error, retry ${attempt}/${tries - 1}: ${message}`);
+    await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+  }
 }
 
 /** Backcheck failures QC rejects (archived); interviewed on top of n so n responses stay. */
@@ -206,6 +246,13 @@ async function main() {
     );
 
   const original = await createForm(admin, SLUG, BRI_TITLE, ownerProfile);
+  const selfForm = await createForm(
+    admin,
+    SELF_SLUG,
+    BRI_SELF_TITLE,
+    ownerProfile,
+    true,
+  );
   const sample = await createForm(
     admin,
     SAMPLE_SLUG,
@@ -267,34 +314,38 @@ async function main() {
         interview.duration,
       );
       if (flags.length) summary.flagged++;
-      const { error } = await admin
-        .rpc("submit_response", {
-          p_form_id: sample.id,
-          p_version_id: sample.versionId,
-          p_submission_token: randomUUID(),
-          p_answers: prepared.rows,
-          p_duration_seconds: interview.duration,
-          p_locale: "id",
-          p_device: r() < 0.85 ? "mobile" : "tablet",
-          p_surveyor_id: surveyors.get(profile.city.code),
-          p_notes: interview.notes,
-          p_quota_cell: quotaCell(settings, prepared.answers) ?? undefined,
-          p_quota_target: settings.quota.target,
-          p_quota_reserve: settings.quota.reserve,
-          p_id_digits: settings.respondentId.digits,
-          p_qc_flags: flags,
-          p_photos: hasPhoto
-            ? [
-                {
-                  id: photoId,
-                  mime: "image/jpeg",
-                  data: SAMPLE_PHOTO.split(",")[1],
-                },
-              ]
-            : undefined,
-          p_submitted_at: new Date(finishedAt).toISOString(),
-        })
-        .single();
+      const token = randomUUID();
+      const device = r() < 0.85 ? "mobile" : "tablet";
+      const { error } = await withRetry(() =>
+        admin
+          .rpc("submit_response", {
+            p_form_id: sample.id,
+            p_version_id: sample.versionId,
+            p_submission_token: token,
+            p_answers: prepared.rows,
+            p_duration_seconds: interview.duration,
+            p_locale: "id",
+            p_device: device,
+            p_surveyor_id: surveyors.get(profile.city.code),
+            p_notes: interview.notes,
+            p_quota_cell: quotaCell(settings, prepared.answers) ?? undefined,
+            p_quota_target: settings.quota.target,
+            p_quota_reserve: settings.quota.reserve,
+            p_id_digits: settings.respondentId.digits,
+            p_qc_flags: flags,
+            p_photos: hasPhoto
+              ? [
+                  {
+                    id: photoId,
+                    mime: "image/jpeg",
+                    data: SAMPLE_PHOTO.split(",")[1],
+                  },
+                ]
+              : undefined,
+            p_submitted_at: new Date(finishedAt).toISOString(),
+          })
+          .single(),
+      );
       if (error) throw new Error(`submit ${i}: ${error.message}`);
       summary.interviews++;
     }
@@ -309,49 +360,61 @@ async function main() {
         start +
         Math.floor(r() * 14) * DAY +
         (1 + Math.floor(r() * 10)) * 3600 * 1000;
-      const { error } = await admin.rpc("record_screenout", {
-        p_form_id: sample.id,
-        p_version_id: sample.versionId,
-        p_submission_token: randomUUID(),
-        p_kind: "rule",
-        p_question_key: so.code.toLowerCase(),
-        p_question_code: so.code,
-        p_answers: so.answers as never,
-        p_surveyor_id: surveyors.get(profile.city.code),
-        p_duration_seconds: 60 + Math.floor(r() * 240),
-        p_locale: "id",
-        p_device: "mobile",
-        p_submitted_at: new Date(finishedAt).toISOString(),
-      });
+      const token = randomUUID();
+      const duration = 60 + Math.floor(r() * 240);
+      const { error } = await withRetry(() =>
+        admin.rpc("record_screenout", {
+          p_form_id: sample.id,
+          p_version_id: sample.versionId,
+          p_submission_token: token,
+          p_kind: "rule",
+          p_question_key: so.code.toLowerCase(),
+          p_question_code: so.code,
+          p_answers: so.answers as never,
+          p_surveyor_id: surveyors.get(profile.city.code),
+          p_duration_seconds: duration,
+          p_locale: "id",
+          p_device: "mobile",
+          p_submitted_at: new Date(finishedAt).toISOString(),
+        }),
+      );
       if (error) throw new Error(`screen-out ${i}: ${error.message}`);
       summary.screenouts++;
     }
 
     // QC: a 20 % backcheck sample, most confirmed, a few rejected.
-    const { data: picked } = await admin.rpc("qc_select_backcheck", {
-      p_form_id: sample.id,
-      p_percent: settings.qc.backcheckPercent,
-    });
+    const { data: picked } = await withRetry(() =>
+      admin.rpc("qc_select_backcheck", {
+        p_form_id: sample.id,
+        p_percent: settings.qc.backcheckPercent,
+      }),
+    );
     summary.backcheck = picked ?? 0;
-    const { data: backcheck } = await admin
-      .from("responses")
-      .select("id, qc_flags")
-      .eq("form_id", sample.id)
-      .eq("qc_status", "backcheck");
+    const { data: backcheck } = await withRetry(() =>
+      admin
+        .from("responses")
+        .select("id, qc_flags")
+        .eq("form_id", sample.id)
+        .eq("qc_status", "backcheck"),
+    );
     let rejected = 0;
     for (const [i, row] of (backcheck ?? []).entries()) {
       // Every 7th backcheck fails (deterministic, so exactly REJECTS are archived).
       if (i % 7 !== 3 || rejected >= REJECTS) {
-        await admin.rpc("qc_set_status", {
-          p_response_id: row.id,
-          p_status: "approved",
-          p_note: "Backcheck telepon: S1, S2, S5 dan I3a terkonfirmasi.",
-        });
+        await withRetry(() =>
+          admin.rpc("qc_set_status", {
+            p_response_id: row.id,
+            p_status: "approved",
+            p_note: "Backcheck telepon: S1, S2, S5 dan I3a terkonfirmasi.",
+          }),
+        );
       } else {
-        await admin.rpc("qc_reject", {
-          p_response_id: row.id,
-          p_reason: "Backcheck gagal: responden tidak ingat diwawancarai.",
-        });
+        await withRetry(() =>
+          admin.rpc("qc_reject", {
+            p_response_id: row.id,
+            p_reason: "Backcheck gagal: responden tidak ingat diwawancarai.",
+          }),
+        );
         rejected++;
       }
     }
@@ -362,6 +425,7 @@ async function main() {
   console.table(
     [
       original && { form: SLUG, id: original.id, responses: 0 },
+      selfForm && { form: SELF_SLUG, id: selfForm.id, responses: 0 },
       sample && {
         form: SAMPLE_SLUG,
         id: sample.id,

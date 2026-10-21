@@ -59,6 +59,8 @@ export type FormPagesProps = {
   seed?: string;
   /** Interviews: question and option codes. */
   showCodes?: boolean;
+  /** Who reads the screen-out notice: the respondent (default) or a surveyor. */
+  audience?: "respondent" | "interviewer";
   /** Interviews: a note per question (required where the question says so). */
   notes?: { value: Notes; onChange: (notes: Notes) => void };
   /** Interviews: capture GPS automatically. */
@@ -89,10 +91,12 @@ export function FormPages({
   honeypot,
   seed,
   showCodes = false,
+  audience = "respondent",
   notes,
   autoLocate = false,
   submitLabel,
 }: FormPagesProps) {
+  const interviewer = audience === "interviewer";
   const t = useTranslations("renderer");
   const tp = useTranslations("publicForm");
   const [errors, setErrors] = useState<AnswerErrors>({});
@@ -364,12 +368,16 @@ export function FormPages({
       {endsHere && termination && (
         <Alert variant="destructive" data-testid="screen-out">
           <OctagonX aria-hidden />
-          <AlertTitle>{t("screenOutTitle")}</AlertTitle>
+          <AlertTitle>
+            {interviewer ? t("screenOutTitle") : t("screenOutRespondentTitle")}
+          </AlertTitle>
           <AlertDescription>
-            {termination.reason ||
-              (termination.code
-                ? t("screenOutCode", { code: termination.code })
-                : t("screenOutDefault"))}
+            {interviewer
+              ? termination.reason ||
+                (termination.code
+                  ? t("screenOutCode", { code: termination.code })
+                  : t("screenOutDefault"))
+              : t("screenOutRespondent")}
           </AlertDescription>
         </Alert>
       )}
@@ -432,7 +440,9 @@ export function FormPages({
           {submitting
             ? tp("submitting")
             : endsHere
-              ? t("screenOutSubmit")
+              ? interviewer
+                ? t("screenOutSubmit")
+                : t("screenOutRespondentSubmit")
               : isLast
                 ? (submitLabel ?? t("submit"))
                 : t("next")}
@@ -510,6 +520,7 @@ export function FormRenderer({
       onScreenOut={() => setDone("screened")}
       seed={"preview-" + run}
       showCodes
+      audience="interviewer"
     />
   );
 }

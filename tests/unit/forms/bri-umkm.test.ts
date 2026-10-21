@@ -4,6 +4,7 @@ import {
   briKey as k,
   briUmkmCapiSettings,
   briUmkmDefinition,
+  briUmkmSelfDefinition,
 } from "@/lib/forms/bri-umkm";
 import {
   allCells,
@@ -108,5 +109,24 @@ describe("BRI UMKM questionnaire", () => {
     expect(keys).toContain("b4__r3");
     expect(keys.every((key) => key.length <= 64)).toBe(true);
     expect(flattenQuestions(def).length).toBeGreaterThan(90);
+  });
+
+  it("has a self-administered version without interviewer parts", () => {
+    const self = briUmkmSelfDefinition();
+    expect(formDefinitionSchema.safeParse(self).success).toBe(true);
+    expect(validateDefinition(self)).toEqual([]);
+    const questions = flattenQuestions(self);
+    const text = JSON.stringify(self);
+    expect(text).not.toMatch(/surveyor|\[kartu|dibacakan|wawancara/i);
+    expect(questions.some((q) => q.noteRequired)).toBe(false);
+    expect(
+      questions.some((q) => q.type === "location" || q.type === "photo"),
+    ).toBe(false);
+    // Same keys and logic: screening still ends the survey.
+    expect(
+      computeFlow(self, { ...qualified, s1: pick(3) }).terminated?.code,
+    ).toBe("S1");
+    const original = new Set(flattenQuestions(def).map((q) => q.key));
+    expect(questions.every((q) => original.has(q.key))).toBe(true);
   });
 });

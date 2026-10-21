@@ -393,6 +393,7 @@ export function InterviewRunner({
     <div className="flex w-full flex-col gap-3">
       {bar}
       <FormPages
+        audience="interviewer"
         definition={form.definition}
         title={form.title}
         description={null}
