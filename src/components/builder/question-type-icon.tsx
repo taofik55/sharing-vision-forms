@@ -2,6 +2,10 @@ import {
   AlignLeft,
   AtSign,
   Calendar,
+  Camera,
+  Grid3x3,
+  ListOrdered,
+  MapPin,
   CircleDot,
   Hash,
   ListChecks,
@@ -26,6 +30,10 @@ export const QUESTION_TYPE_ICONS: Record<QuestionType, LucideIcon> = {
   linear_scale: SlidersHorizontal,
   email: AtSign,
   phone: Phone,
+  grid: Grid3x3,
+  ranking: ListOrdered,
+  location: MapPin,
+  photo: Camera,
 };
 
 export function QuestionTypeIcon({

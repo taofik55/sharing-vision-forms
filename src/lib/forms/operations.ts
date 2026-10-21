@@ -4,8 +4,10 @@
  */
 import { customAlphabet } from "nanoid";
 import {
+  hasOptions,
   isChoiceType,
   supportsPlaceholder,
+  type ConditionGroup,
   type FormDefinition,
   type Option,
   type Question,
@@ -27,6 +29,8 @@ export type NewQuestionLabels = {
   title: string;
   /** Label for the n-th default option (1-based). */
   option: (n: number) => string;
+  /** Label for the n-th default grid row (1-based). */
+  row?: (n: number) => string;
 };
 
 export function createQuestion(
@@ -45,17 +49,39 @@ export function createQuestion(
 
 function applyTypeDefaults(
   question: Question,
-  labels: Pick<NewQuestionLabels, "option">,
+  labels: Pick<NewQuestionLabels, "option" | "row">,
 ): Question {
   const q = { ...question };
-  if (isChoiceType(q.type)) {
+  if (hasOptions(q.type)) {
     if (!q.options || q.options.length === 0) {
-      q.options = [1, 2].map((n) => ({ id: newId(), label: labels.option(n) }));
+      const count = q.type === "grid" || q.type === "ranking" ? 3 : 2;
+      q.options = Array.from({ length: count }, (_, i) => ({
+        id: newId(),
+        label: labels.option(i + 1),
+      }));
     }
   } else {
     delete q.options;
     delete q.allowOther;
+    delete q.randomizeOptions;
+    delete q.optionsFrom;
   }
+  if (q.type === "grid") {
+    delete q.allowOther;
+    q.grid ??= {
+      multiple: false,
+      rows: [1, 2].map((n) => ({
+        id: newId(),
+        label: (labels.row ?? labels.option)(n),
+      })),
+    };
+  } else delete q.grid;
+  if (q.type === "ranking")
+    q.ranking ??= { max: Math.min(3, q.options?.length ?? 3) };
+  else delete q.ranking;
+  if (q.type !== "checkboxes") delete q.autoSelectFrom;
+  if (!isChoiceType(q.type)) delete q.notSameAs;
+  if (!hasOptions(q.type)) delete q.orderLike;
   if (q.type === "linear_scale") q.scale ??= { min: 1, max: 5 };
   else delete q.scale;
   if (q.type === "rating") q.rating ??= { max: 5 };
@@ -104,11 +130,11 @@ export function pruneValidation(
 export function changeQuestionType(
   question: Question,
   type: QuestionType,
-  labels: Pick<NewQuestionLabels, "option">,
+  labels: Pick<NewQuestionLabels, "option" | "row">,
 ): { question: Question; lostOptions: boolean } {
   const lostOptions =
-    isChoiceType(question.type) &&
-    !isChoiceType(type) &&
+    hasOptions(question.type) &&
+    !hasOptions(type) &&
     (question.options?.length ?? 0) > 0;
   const next: Question = { ...question, type };
   const validation = pruneValidation(type, question.validation);
@@ -311,7 +337,13 @@ export function moveOption(
   return next;
 }
 
-/** "a\n\n b \nc" -> options for each non-empty line (trimmed, deduplicated). */
+/** "1 Pemilik", "97 = Tidak tahu", "· 2 Pengelola": answer code + label. */
+const CODED_LINE = /^[·•\-*]?\s*(\d{1,3})\s*(?:[.):=-]\s*|\s+)(.+)$/;
+
+/**
+ * "a\n\n b \nc" -> options for each non-empty line (trimmed, deduplicated).
+ * A leading number becomes the option's answer code ("1 Pemilik").
+ */
 export function optionsFromLines(
   text: string,
   existing: Option[] = [],
@@ -319,10 +351,13 @@ export function optionsFromLines(
   const seen = new Set(existing.map((o) => o.label.trim().toLowerCase()));
   const added: Option[] = [];
   for (const line of text.split(/\r?\n/)) {
-    const label = line.trim();
+    const raw = line.trim();
+    if (!raw) continue;
+    const coded = CODED_LINE.exec(raw);
+    const label = (coded ? coded[2] : raw).trim();
     if (!label || seen.has(label.toLowerCase())) continue;
     seen.add(label.toLowerCase());
-    added.push({ id: newId(), label });
+    added.push({ id: newId(), label, ...(coded ? { code: coded[1] } : {}) });
   }
   return [...existing, ...added];
 }
@@ -336,39 +371,83 @@ export function cloneDefinitionWithNewKeys(
   def: FormDefinition,
 ): FormDefinition {
   const keyMap = new Map<string, string>();
-  for (const s of def.sections)
+  const sectionMap = new Map<string, string>();
+  for (const s of def.sections) {
+    sectionMap.set(s.id, newId());
     for (const q of s.questions) keyMap.set(q.key, newId());
+  }
+  const key = (k: string) => keyMap.get(k) ?? k;
+  const group = (g: ConditionGroup): ConditionGroup => ({
+    ...g,
+    conditions: g.conditions.map((c) => ({
+      ...c,
+      questionKey: key(c.questionKey),
+      ...(c.operator === "same_as" || c.operator === "not_same_as"
+        ? { value: key(String(c.value ?? "")) }
+        : {}),
+    })),
+  });
 
   return {
     ...def,
     sections: def.sections.map((s) => ({
       ...structuredClone(s),
-      id: newId(),
+      id: sectionMap.get(s.id)!,
       questions: s.questions.map((q) => {
         const copy: Question = structuredClone(q);
         copy.id = newId();
-        copy.key = keyMap.get(q.key)!;
-        if (copy.showIf) {
-          copy.showIf = {
-            ...copy.showIf,
-            conditions: copy.showIf.conditions.map((c) => ({
-              ...c,
-              questionKey: keyMap.get(c.questionKey) ?? c.questionKey,
-            })),
+        copy.key = key(q.key);
+        if (copy.showIf) copy.showIf = group(copy.showIf);
+        if (copy.rules)
+          copy.rules = copy.rules.map((r) => ({
+            ...r,
+            ...(r.when ? { when: group(r.when) } : {}),
+            ...(r.target
+              ? { target: sectionMap.get(r.target) ?? key(r.target) }
+              : {}),
+          }));
+        if (copy.optionsFrom)
+          copy.optionsFrom = {
+            ...copy.optionsFrom,
+            questionKey: key(copy.optionsFrom.questionKey),
           };
-        }
+        if (copy.autoSelectFrom) copy.autoSelectFrom = key(copy.autoSelectFrom);
+        if (copy.notSameAs) copy.notSameAs = key(copy.notSameAs);
+        if (copy.orderLike) copy.orderLike = key(copy.orderLike);
+        if (copy.grid?.rowsFrom)
+          copy.grid = { ...copy.grid, rowsFrom: key(copy.grid.rowsFrom) };
         return copy;
       }),
     })),
   };
 }
 
-/** Questions (by key) whose conditions reference the given key. */
+/** Every question key a question refers to (logic, rules, carried-over options). */
+export function referencedKeys(q: Question): string[] {
+  const fromGroup = (g?: ConditionGroup) =>
+    (g?.conditions ?? []).flatMap((c) =>
+      c.operator === "same_as" || c.operator === "not_same_as"
+        ? [c.questionKey, String(c.value ?? "")]
+        : [c.questionKey],
+    );
+  return [
+    ...fromGroup(q.showIf),
+    ...(q.rules ?? []).flatMap((r) => [
+      ...fromGroup(r.when),
+      ...(r.target ? [r.target] : []),
+    ]),
+    ...(q.optionsFrom ? [q.optionsFrom.questionKey] : []),
+    ...(q.autoSelectFrom ? [q.autoSelectFrom] : []),
+    ...(q.notSameAs ? [q.notSameAs] : []),
+    ...(q.orderLike ? [q.orderLike] : []),
+    ...(q.grid?.rowsFrom ? [q.grid.rowsFrom] : []),
+  ];
+}
+
+/** Questions (by key) that refer to the given key. */
 export function dependentsOf(def: FormDefinition, key: string): Question[] {
   return def.sections.flatMap((s) =>
-    s.questions.filter((q) =>
-      q.showIf?.conditions.some((c) => c.questionKey === key),
-    ),
+    s.questions.filter((q) => q.key !== key && referencedKeys(q).includes(key)),
   );
 }
 

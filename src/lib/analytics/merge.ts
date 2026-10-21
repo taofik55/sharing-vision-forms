@@ -6,7 +6,8 @@
  * - widgets of removed questions stay (rendered as "Question removed");
  * - user changes (hidden, renamed, resized, notes, chart, palette) are never touched.
  */
-import { flattenQuestions, type FormDefinition } from "@/lib/forms/schema";
+import { analysisQuestions } from "@/lib/forms/analysis";
+import type { FormDefinition } from "@/lib/forms/schema";
 import {
   bottomOf,
   buildAutoDashboard,
@@ -21,7 +22,7 @@ export function mergeDashboardConfig(
 ): DashboardConfig {
   if (!saved) return buildAutoDashboard(definition);
 
-  const currentKeys = flattenQuestions(definition).map((q) => q.key);
+  const currentKeys = analysisQuestions(definition).map((q) => q.key);
   const known = new Set(saved.knownKeys);
   const withWidget = new Set(
     saved.widgets
@@ -29,7 +30,7 @@ export function mergeDashboardConfig(
       .map((w) => w.questionKey!),
   );
 
-  const fresh = flattenQuestions(definition)
+  const fresh = analysisQuestions(definition)
     .filter((q) => !known.has(q.key) && !withWidget.has(q.key))
     .map(questionWidget)
     .filter((w): w is Widget => w !== null);
@@ -59,5 +60,5 @@ export function mergeDashboardConfig(
 
 /** Question keys of the current definition (to mark removed-question widgets). */
 export function currentQuestionKeys(definition: FormDefinition): Set<string> {
-  return new Set(flattenQuestions(definition).map((q) => q.key));
+  return new Set(analysisQuestions(definition).map((q) => q.key));
 }

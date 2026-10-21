@@ -225,6 +225,7 @@ export type Database = {
       };
       forms: {
         Row: {
+          capi_settings: NonNullable<Json>;
           closed_message: string | null;
           created_at: string;
           current_version_id: string | null;
@@ -244,6 +245,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          capi_settings?: NonNullable<Json>;
           closed_message?: string | null;
           created_at?: string;
           current_version_id?: string | null;
@@ -262,6 +264,7 @@ export type Database = {
           workspace_id: string;
         };
         Update: {
+          capi_settings?: NonNullable<Json>;
           closed_message?: string | null;
           created_at?: string;
           current_version_id?: string | null;
@@ -299,6 +302,33 @@ export type Database = {
             columns: ["workspace_id"];
             isOneToOne: false;
             referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      interview_sequences: {
+        Row: {
+          form_id: string;
+          last_seq: number;
+          prefix: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          form_id: string;
+          last_seq?: number;
+          prefix: string;
+        };
+        Update: {
+          form_id?: string;
+          last_seq?: number;
+          prefix?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "interview_sequences_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "forms";
             referencedColumns: ["id"];
           },
         ];
@@ -419,6 +449,52 @@ export type Database = {
           },
         ];
       };
+      response_archive: {
+        Row: {
+          answers: NonNullable<Json>;
+          archived_at: string;
+          archived_by: string | null;
+          form_id: string;
+          id: string;
+          reason: string | null;
+          response: NonNullable<Json>;
+        };
+        ComputedFields: never;
+        Insert: {
+          answers: NonNullable<Json>;
+          archived_at?: string;
+          archived_by?: string | null;
+          form_id: string;
+          id: string;
+          reason?: string | null;
+          response: NonNullable<Json>;
+        };
+        Update: {
+          answers?: NonNullable<Json>;
+          archived_at?: string;
+          archived_by?: string | null;
+          form_id?: string;
+          id?: string;
+          reason?: string | null;
+          response?: NonNullable<Json>;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "response_archive_archived_by_fkey";
+            columns: ["archived_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "response_archive_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "forms";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       response_drafts: {
         Row: {
           data: NonNullable<Json>;
@@ -462,6 +538,129 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "form_versions";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      response_photos: {
+        Row: {
+          created_at: string;
+          data: string;
+          form_id: string;
+          id: string;
+          mime: string;
+          response_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          data: string;
+          form_id: string;
+          id: string;
+          mime: string;
+          response_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          data?: string;
+          form_id?: string;
+          id?: string;
+          mime?: string;
+          response_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "response_photos_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "forms";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "response_photos_response_id_fkey";
+            columns: ["response_id"];
+            isOneToOne: false;
+            referencedRelation: "responses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      response_screenouts: {
+        Row: {
+          answers: NonNullable<Json>;
+          device: string | null;
+          duration_seconds: number | null;
+          form_id: string;
+          form_version_id: string;
+          id: string;
+          kind: string;
+          locale: string | null;
+          notes: NonNullable<Json>;
+          question_code: string | null;
+          question_key: string | null;
+          quota_cell: string | null;
+          reason: string | null;
+          submission_token: string;
+          submitted_at: string;
+          surveyor_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          answers?: NonNullable<Json>;
+          device?: string | null;
+          duration_seconds?: number | null;
+          form_id: string;
+          form_version_id: string;
+          id?: string;
+          kind: string;
+          locale?: string | null;
+          notes?: NonNullable<Json>;
+          question_code?: string | null;
+          question_key?: string | null;
+          quota_cell?: string | null;
+          reason?: string | null;
+          submission_token: string;
+          submitted_at?: string;
+          surveyor_id?: string | null;
+        };
+        Update: {
+          answers?: NonNullable<Json>;
+          device?: string | null;
+          duration_seconds?: number | null;
+          form_id?: string;
+          form_version_id?: string;
+          id?: string;
+          kind?: string;
+          locale?: string | null;
+          notes?: NonNullable<Json>;
+          question_code?: string | null;
+          question_key?: string | null;
+          quota_cell?: string | null;
+          reason?: string | null;
+          submission_token?: string;
+          submitted_at?: string;
+          surveyor_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "response_screenouts_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "forms";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "response_screenouts_surveyor_id_fkey";
+            columns: ["surveyor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "response_screenouts_version_fk";
+            columns: ["form_version_id", "form_id"];
+            isOneToOne: false;
+            referencedRelation: "form_versions";
+            referencedColumns: ["id", "form_id"];
           },
         ];
       };
@@ -515,6 +714,7 @@ export type Database = {
       };
       responses: {
         Row: {
+          backcheck_at: string | null;
           device: string | null;
           duration_seconds: number | null;
           form_id: string;
@@ -524,12 +724,23 @@ export type Database = {
           identifier_key: string | null;
           identifier_phone: string | null;
           is_demo: boolean;
+          is_reserve: boolean;
           locale: string | null;
+          notes: NonNullable<Json>;
+          qc_flags: string[];
+          qc_note: string | null;
+          qc_reviewed_at: string | null;
+          qc_reviewed_by: string | null;
+          qc_status: string;
+          quota_cell: string | null;
+          respondent_code: string | null;
           submission_token: string | null;
           submitted_at: string;
+          surveyor_id: string | null;
         };
         ComputedFields: never;
         Insert: {
+          backcheck_at?: string | null;
           device?: string | null;
           duration_seconds?: number | null;
           form_id: string;
@@ -539,11 +750,22 @@ export type Database = {
           identifier_key?: string | null;
           identifier_phone?: string | null;
           is_demo?: boolean;
+          is_reserve?: boolean;
           locale?: string | null;
+          notes?: NonNullable<Json>;
+          qc_flags?: string[];
+          qc_note?: string | null;
+          qc_reviewed_at?: string | null;
+          qc_reviewed_by?: string | null;
+          qc_status?: string;
+          quota_cell?: string | null;
+          respondent_code?: string | null;
           submission_token?: string | null;
           submitted_at?: string;
+          surveyor_id?: string | null;
         };
         Update: {
+          backcheck_at?: string | null;
           device?: string | null;
           duration_seconds?: number | null;
           form_id?: string;
@@ -553,9 +775,19 @@ export type Database = {
           identifier_key?: string | null;
           identifier_phone?: string | null;
           is_demo?: boolean;
+          is_reserve?: boolean;
           locale?: string | null;
+          notes?: NonNullable<Json>;
+          qc_flags?: string[];
+          qc_note?: string | null;
+          qc_reviewed_at?: string | null;
+          qc_reviewed_by?: string | null;
+          qc_status?: string;
+          quota_cell?: string | null;
+          respondent_code?: string | null;
           submission_token?: string | null;
           submitted_at?: string;
+          surveyor_id?: string | null;
         };
         Relationships: [
           {
@@ -571,6 +803,20 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "form_versions";
             referencedColumns: ["id", "form_id"];
+          },
+          {
+            foreignKeyName: "responses_qc_reviewed_by_fkey";
+            columns: ["qc_reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "responses_surveyor_id_fkey";
+            columns: ["surveyor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -598,6 +844,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      _analysis_questions: {
+        Args: { p_def: Json; p_q: Json };
+        Returns: Json[];
+      };
       _answer_summary_sql: {
         Args: Record<PropertyKey, never>;
         Returns: string;
@@ -606,6 +856,7 @@ export type Database = {
         Args: { p_full: boolean; p_text: string; p_type: string };
         Returns: string;
       };
+      _assert_can_edit: { Args: { p_form_id: string }; Returns: undefined };
       _assert_can_view: { Args: { p_form_id: string }; Returns: undefined };
       _bundle_questions: {
         Args: { p_filters: Json; p_form_id: string; p_only_key?: string };
@@ -692,6 +943,7 @@ export type Database = {
         Returns: undefined;
       };
       can_edit_form: { Args: { p_form_id: string }; Returns: boolean };
+      can_interview: { Args: { p_form_id: string }; Returns: boolean };
       can_view_form: { Args: { p_form_id: string }; Returns: boolean };
       check_rate_limit: {
         Args: { p_bucket: string; p_limit: number; p_window_seconds: number };
@@ -748,10 +1000,16 @@ export type Database = {
         };
         Returns: {
           answers: Json;
+          duration_seconds: number;
           id: string;
           identifier_email: string;
           identifier_phone: string;
+          notes: Json;
+          qc_status: string;
+          quota_cell: string;
+          respondent_code: string;
           submitted_at: string;
+          surveyor: string;
           version_number: number;
         }[];
       };
@@ -765,6 +1023,13 @@ export type Database = {
         Returns: number;
       };
       get_response: { Args: { p_response_id: string }; Returns: Json };
+      get_response_photo: {
+        Args: { p_photo_id: string };
+        Returns: {
+          data: string;
+          mime: string;
+        }[];
+      };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_form_owner: { Args: { p_form_id: string }; Returns: boolean };
       is_slug_available: {
@@ -818,6 +1083,18 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      list_interview_forms: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          my_screenouts: number;
+          my_today: number;
+          my_total: number;
+          status: Database["public"]["Enums"]["form_status"];
+          title: string;
+          total: number;
+        }[];
+      };
       list_responses: {
         Args: {
           p_cursor?: Json;
@@ -829,6 +1106,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      list_screenouts: {
+        Args: { p_form_id: string; p_limit?: number; p_offset?: number };
+        Returns: Json;
+      };
       mask_email: { Args: { p_email: string }; Returns: string };
       mask_phone: { Args: { p_phone: string }; Returns: string };
       publish_form: {
@@ -838,6 +1119,30 @@ export type Database = {
           version_id: string;
           version_number: number;
         }[];
+      };
+      qc_list: {
+        Args: {
+          p_form_id: string;
+          p_limit?: number;
+          p_offset?: number;
+          p_surveyor_id?: string;
+          p_view?: string;
+        };
+        Returns: Json;
+      };
+      qc_overview: { Args: { p_form_id: string }; Returns: Json };
+      qc_reject: {
+        Args: { p_reason?: string; p_response_id: string };
+        Returns: undefined;
+      };
+      qc_restore: { Args: { p_archive_id: string }; Returns: undefined };
+      qc_select_backcheck: {
+        Args: { p_form_id: string; p_percent?: number };
+        Returns: number;
+      };
+      qc_set_status: {
+        Args: { p_note?: string; p_response_id: string; p_status: string };
+        Returns: undefined;
       };
       question_stats: {
         Args: { p_filters?: Json; p_form_id: string; p_question_key: string };
@@ -858,9 +1163,33 @@ export type Database = {
           value: string;
         }[];
       };
+      quota_count: {
+        Args: { p_cell: string; p_form_id: string };
+        Returns: number;
+      };
       rebuild_dashboard_summary: {
         Args: { p_form_id?: string };
         Returns: number;
+      };
+      record_screenout: {
+        Args: {
+          p_answers?: Json;
+          p_device?: string;
+          p_duration_seconds?: number;
+          p_form_id: string;
+          p_kind: string;
+          p_locale?: string;
+          p_notes?: Json;
+          p_question_code?: string;
+          p_question_key?: string;
+          p_quota_cell?: string;
+          p_reason?: string;
+          p_submission_token: string;
+          p_submitted_at?: string;
+          p_surveyor_id?: string;
+          p_version_id: string;
+        };
+        Returns: string;
       };
       save_response_draft: {
         Args: {
@@ -878,24 +1207,34 @@ export type Database = {
           p_draft_token?: string;
           p_duration_seconds?: number;
           p_form_id: string;
+          p_id_digits?: number;
           p_identifier_email?: string;
           p_identifier_key?: string;
           p_identifier_phone?: string;
           p_locale?: string;
+          p_notes?: Json;
+          p_photos?: Json;
+          p_qc_flags?: string[];
+          p_quota_cell?: string;
+          p_quota_reserve?: number;
+          p_quota_target?: number;
           p_submission_token: string;
+          p_submitted_at?: string;
+          p_surveyor_id?: string;
           p_version_id: string;
         };
         Returns: {
           replayed: boolean;
+          respondent_code: string;
           response_id: string;
         }[];
       };
     };
     Enums: {
-      app_role: "admin" | "editor" | "viewer";
+      app_role: "admin" | "editor" | "viewer" | "surveyor";
       form_status: "draft" | "published" | "closed" | "archived";
       identifier_mode: "none" | "email" | "phone" | "email_or_phone";
-      member_role: "viewer" | "editor";
+      member_role: "viewer" | "editor" | "surveyor";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1023,10 +1362,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "editor", "viewer"],
+      app_role: ["admin", "editor", "viewer", "surveyor"],
       form_status: ["draft", "published", "closed", "archived"],
       identifier_mode: ["none", "email", "phone", "email_or_phone"],
-      member_role: ["viewer", "editor"],
+      member_role: ["viewer", "editor", "surveyor"],
     },
   },
 } as const;

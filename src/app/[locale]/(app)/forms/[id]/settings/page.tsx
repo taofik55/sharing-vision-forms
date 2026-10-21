@@ -4,6 +4,7 @@ import {
   DangerZone,
   PublishControls,
 } from "@/components/forms/form-status-controls";
+import { CapiSettingsCard } from "@/components/forms/capi-settings-card";
 import { PublicLink } from "@/components/forms/public-link";
 import { SettingsForm } from "@/components/forms/settings-form";
 import { SharingCard, type Member } from "@/components/forms/sharing-card";
@@ -15,6 +16,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { requireFormAccess } from "@/lib/forms/access";
+import { parseCapiSettings } from "@/lib/forms/capi";
+import { flattenQuestions, formDefinitionSchema } from "@/lib/forms/schema";
 import { publicFormUrl, qrSvg } from "@/lib/forms/public-url";
 import type { Locale } from "@/lib/i18n/routing";
 import { createClient } from "@/lib/supabase/server";
@@ -55,6 +58,19 @@ export default async function FormSettingsPage({
       .eq("form_id", id),
   ]);
 
+  const draft = formDefinitionSchema.safeParse(form.draft_definition);
+  const choiceQuestions = draft.success
+    ? flattenQuestions(draft.data)
+        .filter((q) => q.type === "multiple_choice" || q.type === "dropdown")
+        .map((q) => ({
+          key: q.key,
+          title: q.title,
+          code: q.code,
+          options: q.options,
+        }))
+    : [];
+  const capi = parseCapiSettings(form.capi_settings);
+
   const ownerName = owners?.find((o) => o.id === form.owner_id)?.name ?? "—";
   const isLive = form.status === "published" || form.status === "closed";
   const url = publicFormUrl(form.slug, locale as Locale);
@@ -79,6 +95,19 @@ export default async function FormSettingsPage({
                 closedMessage: form.closed_message ?? "",
                 thankYouMessage: form.thank_you_message ?? "",
               }}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("capi")}</CardTitle>
+            <CardDescription>{t("capiDescription")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CapiSettingsCard
+              formId={form.id}
+              initial={capi}
+              questions={choiceQuestions}
             />
           </CardContent>
         </Card>
@@ -114,7 +143,7 @@ export default async function FormSettingsPage({
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            {isLive && (
+            {isLive && !capi.enabled && (
               <PublicLink
                 url={url}
                 qrSvg={await qrSvg(url)}

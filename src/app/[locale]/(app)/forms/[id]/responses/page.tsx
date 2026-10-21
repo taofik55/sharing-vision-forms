@@ -10,6 +10,8 @@ import {
 } from "@/lib/analytics/filters";
 import { loadFormVersions } from "@/lib/analytics/server";
 import { requireFormAccess } from "@/lib/forms/access";
+import { analysisQuestions } from "@/lib/forms/analysis";
+import { parseCapiSettings } from "@/lib/forms/capi";
 import type { Locale } from "@/lib/i18n/routing";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -55,9 +57,11 @@ export default async function FormResponsesPage({
       formId={id}
       canDelete={canManage}
       questions={questions}
-      columnKeys={current.sections.flatMap((s) =>
-        s.questions.map((q) => q.key),
-      )}
+      columnKeys={analysisQuestions(current)
+        .filter((q) => q.type !== "photo")
+        .map((q) => q.key)}
+      interview={parseCapiSettings(form.capi_settings).enabled}
+
       versions={versions}
       initialFilters={parseFilters(sp)}
       initialSearch={search}

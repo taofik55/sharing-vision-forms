@@ -5,7 +5,7 @@ import { SLUG_PATTERN } from "./slug";
 
 export { IDENTIFIER_MODES };
 
-export const MEMBER_ROLES = ["viewer", "editor"] as const;
+export const MEMBER_ROLES = ["viewer", "editor", "surveyor"] as const;
 
 /** Form settings (not the definition). The deadline is Jakarta wall time. */
 export const formSettingsSchema = z.object({

@@ -149,6 +149,7 @@ export function Builder(props: BuilderProps) {
     () => ({
       title: t("builder.untitledQuestion"),
       option: (n) => t("builder.option", { number: n }),
+      row: (n) => t("builder.row", { number: n }),
     }),
     [t],
   );

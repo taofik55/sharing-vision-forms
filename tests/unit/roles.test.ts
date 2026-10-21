@@ -11,15 +11,25 @@ describe("getNavItems", () => {
     getNavItems(role).map((i) => i.key);
 
   it("gives admins the admin section", () => {
-    expect(keys("admin")).toEqual(["home", "forms", "users", "demoTools"]);
+    expect(keys("admin")).toEqual([
+      "home",
+      "forms",
+      "interviews",
+      "users",
+      "demoTools",
+    ]);
   });
 
   it.each(["editor", "viewer"] as const)(
     "hides admin items from %s",
     (role) => {
-      expect(keys(role)).toEqual(["home", "forms"]);
+      expect(keys(role)).toEqual(["home", "forms", "interviews"]);
     },
   );
+
+  it("gives surveyors interviews only", () => {
+    expect(keys("surveyor")).toEqual(["interviews"]);
+  });
 });
 
 describe("canCreateForms", () => {
@@ -27,6 +37,7 @@ describe("canCreateForms", () => {
     expect(canCreateForms("admin")).toBe(true);
     expect(canCreateForms("editor")).toBe(true);
     expect(canCreateForms("viewer")).toBe(false);
+    expect(canCreateForms("surveyor")).toBe(false);
   });
 });
 

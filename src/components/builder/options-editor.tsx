@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ClipboardPaste, GripVertical, Plus, X } from "lucide-react";
+import { Ban, ClipboardPaste, GripVertical, Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ function OptionMarker({
   type: Question["type"];
   index: number;
 }) {
-  if (type === "dropdown")
+  if (type === "dropdown" || type === "ranking")
     return (
       <span
         className="w-5 shrink-0 text-right text-xs text-muted-foreground tabular-nums"
@@ -64,11 +64,23 @@ function OptionMarker({
 type OptionsEditorProps = {
   question: Question;
   update: (patch: Partial<Question>, coalesceKey?: string) => void;
+  /** options (also a grid's columns) or a grid's rows. */
+  field?: "options" | "rows";
 };
 
-export function OptionsEditor({ question, update }: OptionsEditorProps) {
+export function OptionsEditor({
+  question,
+  update,
+  field = "options",
+}: OptionsEditorProps) {
   const t = useTranslations("builder");
-  const options = question.options ?? [];
+  const rows = field === "rows";
+  const options = (rows ? question.grid?.rows : question.options) ?? [];
+  // "None"-type options that clear the rest: multi-select lists, grid columns.
+  const exclusiveAllowed =
+    !rows &&
+    (question.type === "checkboxes" ||
+      (question.type === "grid" && Boolean(question.grid?.multiple)));
   const [paste, setPaste] = useState("");
   const [pasteOpen, setPasteOpen] = useState(false);
   const sensors = useSensors(
@@ -77,9 +89,12 @@ export function OptionsEditor({ question, update }: OptionsEditorProps) {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+  const limit = rows ? LIMITS.gridRows : LIMITS.options;
 
   const setOptions = (next: Option[], key?: string) =>
-    update({ options: next }, key);
+    rows
+      ? update({ grid: { multiple: false, ...question.grid, rows: next } }, key)
+      : update({ options: next }, key);
 
   function onDragEnd({ active, over }: DragEndEvent) {
     if (!over || active.id === over.id) return;
@@ -88,9 +103,15 @@ export function OptionsEditor({ question, update }: OptionsEditorProps) {
     if (from >= 0 && to >= 0) setOptions(moveOption(options, from, to));
   }
 
+  const heading = rows
+    ? t("inspector.gridRows")
+    : question.type === "grid"
+      ? t("inspector.gridColumns")
+      : t("inspector.options");
+
   return (
-    <div className="flex flex-col gap-2">
-      <Label>{t("inspector.options")}</Label>
+    <div className="flex flex-col gap-2" data-testid={`options-${field}`}>
+      <Label>{heading}</Label>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -106,13 +127,18 @@ export function OptionsEditor({ question, update }: OptionsEditorProps) {
                 key={option.id}
                 option={option}
                 index={index}
-                type={question.type}
-                onChange={(label) =>
+                type={rows ? "multiple_choice" : question.type}
+                exclusiveAllowed={exclusiveAllowed}
+                onChange={(patch) =>
                   setOptions(
-                    options.map((o) =>
-                      o.id === option.id ? { ...o, label } : o,
-                    ),
-                    `option:${option.id}`,
+                    options.map((o) => {
+                      if (o.id !== option.id) return o;
+                      const next: Option = { ...o, ...patch };
+                      if (!next.code) delete next.code;
+                      if (!next.exclusive) delete next.exclusive;
+                      return next;
+                    }),
+                    `${field}:${option.id}:${Object.keys(patch)[0]}`,
                   )
                 }
                 onRemove={() =>
@@ -128,19 +154,22 @@ export function OptionsEditor({ question, update }: OptionsEditorProps) {
           type="button"
           variant="outline"
           size="sm"
-          disabled={options.length >= LIMITS.options}
+          disabled={options.length >= limit}
           onClick={() =>
             setOptions([
               ...options,
               {
                 id: newId(),
-                label: t("option", { number: options.length + 1 }),
+                label: rows
+                  ? t("row", { number: options.length + 1 })
+                  : t("option", { number: options.length + 1 }),
               },
             ])
           }
+          data-testid={`add-${field}`}
         >
           <Plus aria-hidden />
-          {t("inspector.addOption")}
+          {rows ? t("inspector.addRow") : t("inspector.addOption")}
         </Button>
         <Popover open={pasteOpen} onOpenChange={setPasteOpen}>
           <PopoverTrigger asChild>
@@ -150,9 +179,11 @@ export function OptionsEditor({ question, update }: OptionsEditorProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="flex w-72 flex-col gap-2">
-            <Label htmlFor="paste-options">{t("inspector.pasteOptions")}</Label>
+            <Label htmlFor={`paste-${field}`}>
+              {t("inspector.pasteOptions")}
+            </Label>
             <Textarea
-              id="paste-options"
+              id={`paste-${field}`}
               rows={6}
               value={paste}
               onChange={(e) => setPaste(e.target.value)}
@@ -164,9 +195,7 @@ export function OptionsEditor({ question, update }: OptionsEditorProps) {
               type="button"
               size="sm"
               onClick={() => {
-                setOptions(
-                  optionsFromLines(paste, options).slice(0, LIMITS.options),
-                );
+                setOptions(optionsFromLines(paste, options).slice(0, limit));
                 setPaste("");
                 setPasteOpen(false);
               }}
@@ -176,16 +205,18 @@ export function OptionsEditor({ question, update }: OptionsEditorProps) {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="flex items-center justify-between gap-2 pt-1">
-        <Label htmlFor="allow-other">{t("inspector.allowOther")}</Label>
-        <Switch
-          id="allow-other"
-          checked={Boolean(question.allowOther)}
-          onCheckedChange={(checked) =>
-            update({ allowOther: checked || undefined })
-          }
-        />
-      </div>
+      {!rows && question.type !== "grid" && (
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <Label htmlFor="allow-other">{t("inspector.allowOther")}</Label>
+          <Switch
+            id="allow-other"
+            checked={Boolean(question.allowOther)}
+            onCheckedChange={(checked) =>
+              update({ allowOther: checked || undefined })
+            }
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -194,13 +225,15 @@ function OptionRow({
   option,
   index,
   type,
+  exclusiveAllowed,
   onChange,
   onRemove,
 }: {
   option: Option;
   index: number;
   type: Question["type"];
-  onChange: (label: string) => void;
+  exclusiveAllowed: boolean;
+  onChange: (patch: Partial<Option>) => void;
   onRemove: () => void;
 }) {
   const t = useTranslations("builder.inspector");
@@ -232,12 +265,37 @@ function OptionRow({
       </button>
       <OptionMarker type={type} index={index} />
       <Input
+        value={option.code ?? ""}
+        maxLength={LIMITS.optionCode}
+        aria-label={t("optionCode", { number: index + 1 })}
+        placeholder={t("codePlaceholder")}
+        onChange={(e) => onChange({ code: e.target.value.trim() || undefined })}
+        className="h-8 w-12 shrink-0 px-1.5 text-center font-mono text-xs"
+        data-testid="option-code"
+      />
+      <Input
         value={option.label}
         maxLength={LIMITS.optionLabel}
         aria-label={t("optionLabel", { number: index + 1 })}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange({ label: e.target.value })}
         className="h-8"
       />
+      {exclusiveAllowed && (
+        <Button
+          type="button"
+          variant={option.exclusive ? "secondary" : "ghost"}
+          size="icon"
+          className="size-8 shrink-0"
+          aria-pressed={Boolean(option.exclusive)}
+          aria-label={t("exclusiveOption")}
+          title={t("exclusiveOption")}
+          onClick={() =>
+            onChange({ exclusive: !option.exclusive || undefined })
+          }
+        >
+          <Ban aria-hidden />
+        </Button>
+      )}
       <Button
         type="button"
         variant="ghost"

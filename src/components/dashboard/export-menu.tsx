@@ -28,10 +28,11 @@ export function ExportMenu({
 }) {
   const t = useTranslations("export");
   const locale = useLocale();
-  const href = (format: "csv" | "xlsx") => {
+  const href = (format: "csv" | "xlsx", codes = false) => {
     const params = serializeFilters(filters);
     params.set("format", format);
     params.set("ui", locale);
+    if (codes) params.set("codes", "1");
     return `/api/forms/${formId}/export?${params}`;
   };
 
@@ -58,6 +59,22 @@ export function ExportMenu({
           <a href={href("xlsx")} download data-testid="export-xlsx">
             <FileSpreadsheet aria-hidden />
             {t("xlsx")}
+          </a>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+          {t("codesHint")}
+        </DropdownMenuLabel>
+        <DropdownMenuItem asChild>
+          <a href={href("csv", true)} download data-testid="export-csv-codes">
+            <FileText aria-hidden />
+            {t("csvCodes")}
+          </a>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <a href={href("xlsx", true)} download data-testid="export-xlsx-codes">
+            <FileSpreadsheet aria-hidden />
+            {t("xlsxCodes")}
           </a>
         </DropdownMenuItem>
       </DropdownMenuContent>

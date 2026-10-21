@@ -9,9 +9,9 @@ import { FormStatusBadge } from "@/components/forms/form-status-badge";
 import { NewFormDialog } from "@/components/forms/new-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { canCreateForms } from "@/lib/auth/roles";
+import { canCreateForms, isSurveyor } from "@/lib/auth/roles";
 import { requireUser } from "@/lib/auth/session";
-import { Link } from "@/lib/i18n/navigation";
+import { Link, redirect } from "@/lib/i18n/navigation";
 import type { Locale } from "@/lib/i18n/routing";
 import { createClient } from "@/lib/supabase/server";
 
@@ -19,6 +19,9 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
   setRequestLocale(locale as Locale);
   const user = await requireUser();
+  // Field staff go straight to their interviews.
+  if (isSurveyor(user.role))
+    return redirect({ href: "/interviews", locale: locale as Locale });
   const t = await getTranslations();
   const format = await getFormatter();
   const canCreate = canCreateForms(user.role);

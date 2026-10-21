@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ClosedState } from "@/components/public/closed-state";
+import { InterviewOnly } from "@/components/public/interview-only";
 import { PublicForm } from "@/components/public/public-form";
 import { PublicShell } from "@/components/public/public-shell";
 import { loadPublicForm } from "@/lib/forms/public";
@@ -45,6 +46,8 @@ export default async function PublicFormPage({
     <PublicShell>
       {state.state === "closed" ? (
         <ClosedState title={state.title} message={state.closedMessage} />
+      ) : state.state === "interview" ? (
+        <InterviewOnly title={state.title} formId={state.formId} />
       ) : (
         <PublicForm form={state.form} />
       )}

@@ -364,6 +364,29 @@ flowchart LR
 - Safety: chart, aggregation, grain and operator values are whitelisted before they choose a SQL fragment; keys go in `$3` (text[]), filter values are read from `$4` (the spec) inside the query; numbers in the text (bin edges, limits, indexes) are computed in PL/pgSQL. Email and phone questions raise 22023.
 - Performance: `enable_nestloop = off` and `plan_cache_mode = force_custom_plan` on the function; 180–440 ms at 100k responses locally.
 
+## Interviews (CAPI), quotas and QC
+
+```mermaid
+flowchart LR
+  S["Surveyor (login, role surveyor)"] --> R["/interviews/[id] runner (computeFlow)"]
+  R -->|after S10| QT["/api/interviews/[id]/quota"]
+  R -->|finish| OB["IndexedDB outbox (offline)"]
+  OB -->|online| SUB["/api/interviews/[id]/submit"]
+  SUB --> CHK{session + can_interview, computeFlow, notes, prepareAnswers, qcFlags}
+  CHK -->|screen-out| SO["record_screenout → response_screenouts"]
+  CHK -->|complete| SR["submit_response: quota lock, respondent code, photos"]
+  SR -->|QUOTA_FULL| SO
+  E["Editor"] --> QC["/forms/[id]/qc: qc_overview, qc_list, backcheck, approve / reject / restore"]
+  QC -->|reject| AR["response_archive"]
+```
+
+- **Settings** (`forms.capi_settings`, `capiSettingsSchema` in `src/lib/forms/capi.ts`): enabled, dimensions (question key + option groups with short codes), quota (target, reserve, check-after question), respondent ID digits, QC thresholds, notes. Not versioned. A form with interview mode on refuses public submissions (`/api/f/...` answers 404) and its public page explains that it is filled by interviewers.
+- **Access**: `can_interview(form)` = admin, owner, or a member with role surveyor / editor. `can_view_form` excludes surveyor members, so dashboards, responses, photos and QC stay closed to them. Surveyors only reach the four tables through RPCs; `interview_sequences`, `response_photos`, `response_screenouts`, `response_archive` have RLS on, no policies and no grants.
+- **Submit**: the Route Handler checks the session, rebuilds the flow from the published version (screen-out rules end the interview server-side too), checks required notes, validates answers, splits photos (data URLs) from the answers and computes QC flags. `submit_response` (SECURITY DEFINER, admin client only) locks the quota cell (`pg_advisory_xact_lock`), counts responses in it, raises `QUOTA_FULL` above target + reserve, draws the next number from `interview_sequences` and stores the response, answers (`value_json` for grid / GPS / photo id) and photos in one transaction. A resent submission token returns the first response (`replayed`).
+- **Analysis questions**: `analysisQuestions(definition)` (TS) and `_analysis_questions(q, def)` (SQL) flatten grids (`key__row`) and rankings (`key`, `key__r1…`); `toAnswerRows` writes the same keys, so the dashboard, chart builder, filters and export need no special cases.
+- **QC**: `qc_overview` (totals, quota cells, surveyors, screen-outs per code, flags; "Lainnya" shares come from the aggregated question stats), `qc_list` (paginated, by view and surveyor), `qc_select_backcheck` (per surveyor, up to the percentage, random among interviews not yet picked), `qc_set_status`, `qc_reject` (moves the response with its answers to `response_archive`; summaries are rebuilt by the delete trigger), `qc_restore`. All check `_assert_can_edit`.
+- **Offline**: `public/sw.js` (registered in production) serves `/{locale}/interviews` pages network-first with a cached fallback and `/_next/static` cache-first. `src/lib/forms/outbox.ts` keeps the in-progress interview and finished ones in IndexedDB; the outbox retries when the device comes back online and every 30 s, keeping retryable errors (network, 5xx, 401).
+
 ## Form definition and versions
 
 - `src/lib/forms/schema.ts` holds the only Zod schema of a form definition (builder, renderer, server validation, analytics).
@@ -403,3 +426,10 @@ flowchart LR
 | Benchmark, secret scan                                 | `scripts/bench-dashboard.ts`, `scripts/check-client-secrets.mjs`                                                            |
 | Chart builder spec, results, RPC                       | `src/lib/analytics/{chart-spec,chart-result}.ts`, `supabase/migrations/20261018*_chart_builder_query*.sql`                  |
 | Chart builder UI, custom widget, chart pieces          | `src/components/dashboard/{chart-builder,chart-builder-panels,custom-chart}.tsx`, `src/components/charts/custom-charts.tsx` |
+| Interview (CAPI) settings, quotas, QC flags            | `src/lib/forms/{capi,interview,interview-server,outbox}.ts`                                                                 |
+| Grid / ranking analysis keys                           | `src/lib/forms/analysis.ts`                                                                                                 |
+| Interview pages, runner, offline outbox                | `src/app/[locale]/(app)/interviews/`, `src/components/interviews/`, `public/sw.js`                                          |
+| Interview, quota and photo routes                      | `src/app/api/interviews/[id]/{submit,quota}/route.ts`, `src/app/api/photos/[id]/route.ts`                                   |
+| QC page                                                | `src/app/[locale]/(app)/forms/[id]/qc/`, `src/components/qc/qc-view.tsx`                                                    |
+| CAPI schema, RPCs                                      | `supabase/migrations/20261021090*_capi_*.sql`                                                                               |
+| BRI UMKM questionnaire, sample generator, seed         | `src/lib/forms/bri-umkm.ts`, `scripts/lib/bri-sample.ts`, `scripts/seed-bri.ts`                                             |

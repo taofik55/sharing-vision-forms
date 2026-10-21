@@ -21,7 +21,8 @@
     "adminSection": "Administration",
     "users": "Users",
     "demoTools": "Demo tools",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "interviews": "Interviews"
   },
   "header": {
     "userMenu": "Account menu",
@@ -42,7 +43,8 @@
   "roles": {
     "admin": "Admin",
     "editor": "Editor",
-    "viewer": "Viewer"
+    "viewer": "Viewer",
+    "surveyor": "Surveyor"
   },
   "auth": {
     "loginTitle": "Sign in to SV Form App",
@@ -388,7 +390,8 @@
     "slugTaken": "This link is already used by another form.",
     "userNotFound": "No active user with this email exists.",
     "ownerCannotBeMember": "The owner already has full access.",
-    "generic": "Something went wrong. Please try again."
+    "generic": "Something went wrong. Please try again.",
+    "invalidCapi": "The interview settings are not valid."
   },
   "formNav": {
     "label": "Form sections",
@@ -396,7 +399,8 @@
     "settings": "Settings",
     "dashboard": "Dashboard",
     "responses": "Responses",
-    "backToForms": "All forms"
+    "backToForms": "All forms",
+    "qc": "Quota & QC"
   },
   "questionTypes": {
     "short_text": "Short answer",
@@ -409,7 +413,11 @@
     "rating": "Rating",
     "linear_scale": "Linear scale",
     "email": "Email",
-    "phone": "Phone"
+    "phone": "Phone",
+    "grid": "Grid / matrix",
+    "ranking": "Ranking",
+    "location": "GPS location",
+    "photo": "Photo"
   },
   "operators": {
     "equals": "is",
@@ -420,7 +428,10 @@
     "gtDate": "is after",
     "ltDate": "is before",
     "is_answered": "is answered",
-    "is_empty": "is empty"
+    "is_empty": "is empty",
+    "not_contains": "does not include",
+    "same_as": "same answer as",
+    "not_same_as": "different from"
   },
   "problems": {
     "invalidStructure": "The form data is damaged. Reload the builder.",
@@ -444,7 +455,18 @@
     "conditionForwardReference": "A condition refers to a question that comes later. Move it earlier.",
     "conditionInvalidOperator": "A condition uses an operator that does not fit the question type.",
     "conditionMissingValue": "A condition is missing its value.",
-    "conditionInvalidValue": "A condition has a value that no longer exists."
+    "conditionInvalidValue": "A condition has a value that no longer exists.",
+    "duplicateCode": "A question code is used more than once.",
+    "tooFewRows": "A grid needs at least one row.",
+    "emptyRowLabel": "A grid row is empty.",
+    "duplicateRowId": "A grid has duplicate rows.",
+    "keyTooLong": "Question key plus row is too long.",
+    "invalidRanking": "More ranks than options.",
+    "invalidReference": "A setting refers to a question that does not exist, comes later, or has the wrong type.",
+    "ruleMissingTarget": "A jump rule has no target.",
+    "ruleUnknownTarget": "The jump target does not exist.",
+    "ruleBackwardJump": "Jumps must go to a later question or section.",
+    "ruleTerminateWithoutCondition": "A screen-out rule needs a condition."
   },
   "builder": {
     "palette": "Add question",
@@ -553,7 +575,43 @@
       "key": "Key",
       "keyHint": "Stable id used by answers and analytics. Never changes.",
       "advanced": "Advanced settings",
-      "advancedHint": "Title, description, placeholder, options and “required” are edited on the card."
+      "advancedHint": "Title, description, placeholder, options and “required” are edited on the card.",
+      "code": "Question code",
+      "codeHint": "E.g. S1, A2. Shown to interviewers, used in exports, and usable in text as [S1].",
+      "codePlaceholder": "Code",
+      "optionCode": "Code of option {number}",
+      "exclusiveOption": "Exclusive (clears other choices, e.g. \"None\")",
+      "gridRows": "Rows (statements)",
+      "gridColumns": "Columns (scale / choices)",
+      "addRow": "Add row",
+      "rankingMax": "Maximum ranked",
+      "rankingHint": "Respondents pick and order (MA-3 = 3).",
+      "grid": "Grid",
+      "gridMultiple": "Several columns per row",
+      "rowsFrom": "Rows taken from the answer to",
+      "rowsFixed": "Fixed rows (listed below)",
+      "rowsFromHint": "E.g. rows = banks picked in B1.",
+      "randomizeRows": "Random row order",
+      "straightlining": "Flag identical answers (QC)",
+      "maxPerColumn": "Rows per column limit",
+      "column": "Column",
+      "maxRows": "Max rows",
+      "addLimit": "Add limit",
+      "removeLimit": "Remove limit",
+      "optionSources": "Options & order",
+      "randomizeOptions": "Random option order",
+      "orderLike": "Same random order as",
+      "ownOrder": "Own order",
+      "optionsFrom": "Options taken from the answer to",
+      "allOptions": "All options",
+      "fromSelected": "Selected",
+      "fromUnselected": "Not selected",
+      "optionsFromHint": "Options match by label, then by code.",
+      "autoSelectFrom": "Auto-tick from the answer to",
+      "notSameAs": "Must differ from",
+      "none": "None",
+      "noteRequired": "Interviewer note required",
+      "noteRequiredHint": "Interviews: an empty note blocks sending."
     },
     "logic": {
       "title": "Logic",
@@ -568,7 +626,8 @@
       "chooseValue": "Choose a value",
       "addCondition": "Add condition",
       "removeCondition": "Remove condition",
-      "noEarlierQuestions": "Logic can only use questions placed before this one."
+      "noEarlierQuestions": "Logic can only use questions placed before this one.",
+      "otherQuestion": "Question to compare with"
     },
     "previewDialog": {
       "title": "Preview",
@@ -591,7 +650,28 @@
       "dropdownSummary": "{count, plural, one {# option} other {# options}}, searchable",
       "moreOptions": "+{count, plural, one {# more option} other {# more options}}",
       "datePreview": "dd/mm/yyyy",
-      "moreOnRight": "Set the scale, stars or date limits in the panel on the right."
+      "moreOnRight": "Set the scale, stars or date limits in the panel on the right.",
+      "rankingSummary": "Rank up to {max} of {count} options",
+      "gridSummary": "{rows} rows × {columns} columns",
+      "rowsFromSummary": "Rows come from an earlier answer",
+      "locationPreview": "Device GPS location",
+      "photoPreview": "Photo from the camera"
+    },
+    "row": "Row {number}",
+    "rules": {
+      "title": "Screen-outs & jumps",
+      "hint": "Run after this question is answered, in order.",
+      "action": "Action",
+      "terminate": "End (screen-out)",
+      "jump": "Jump to",
+      "target": "Jump target",
+      "section": "Section",
+      "when": "If",
+      "onlyIf": "Only if",
+      "reason": "Reason (shown to the interviewer)",
+      "remove": "Remove rule",
+      "addTerminate": "Screen-out",
+      "addJump": "Jump"
     }
   },
   "renderer": {
@@ -626,10 +706,43 @@
       "invalidOption": "Choose one of the options.",
       "otherRequired": "Describe your “Other” answer.",
       "tooFewSelections": "Select more options.",
-      "tooManySelections": "Select fewer options."
+      "tooManySelections": "Select fewer options.",
+      "exclusiveOption": "This option cannot be combined with others.",
+      "rowsRequired": "Answer every row.",
+      "tooManyInColumn": "Too many rows picked the same column.",
+      "sameAsOther": "This answer must differ from the earlier one.",
+      "lockedOption": "Options carried over from an earlier answer cannot be removed.",
+      "invalidLocation": "Invalid location.",
+      "invalidPhoto": "The photo is invalid or too large.",
+      "noteRequired": "An interviewer note is required."
     },
     "searchOptions": "Search…",
-    "noMatches": "No matching option."
+    "noMatches": "No matching option.",
+    "surveyorNote": "Interviewer note",
+    "surveyorNotePlaceholder": "Summary of the respondent's answer",
+    "lockedOption": "Selected from an earlier answer",
+    "noOptionsYet": "No options yet: answer the earlier question first.",
+    "noRowsYet": "No rows yet: answer the earlier question first.",
+    "rankingHint": "Pick up to {max}, most important first.",
+    "rankingChosen": "Your ranking",
+    "rankingUp": "Move up",
+    "rankingRemove": "Remove from ranking",
+    "locationEmpty": "No location yet.",
+    "locationCapture": "Capture GPS location",
+    "locationRetry": "Capture again",
+    "locationAccuracy": "accuracy ±{meters} m",
+    "locationDenied": "Location permission denied. Allow location in the browser and try again.",
+    "locationUnavailable": "Location is not available on this device.",
+    "photoTake": "Take photo",
+    "photoRetake": "Retake",
+    "photoRemove": "Remove photo",
+    "photoPreview": "Photo preview",
+    "photoFailed": "The photo could not be processed. Try again.",
+    "screenOutTitle": "The respondent does not qualify",
+    "screenOutCode": "Screen-out at {code}.",
+    "screenOutDefault": "The interview was ended by a screening rule.",
+    "screenOutSubmit": "End interview (screen-out)",
+    "screenOutDone": "Thank you for your time. You are not in the target group of this survey."
   },
   "formSettings": {
     "title": "Settings",
@@ -676,7 +789,8 @@
     "removeLabel": "Remove {name}",
     "memberRole": {
       "viewer": "Can view",
-      "editor": "Can edit"
+      "editor": "Can edit",
+      "surveyor": "Surveyor"
     },
     "memberRoleLabel": "Access for {name}",
     "viewerAppRoleNote": "Read-only account: cannot edit even with edit access.",
@@ -694,7 +808,9 @@
     "archive": "Archive",
     "restore": "Restore",
     "deleteDescription": "Permanently delete the form and all responses.",
-    "delete": "Delete form"
+    "delete": "Delete form",
+    "capi": "Face-to-face interviews (CAPI)",
+    "capiDescription": "Surveyors sign in and interview respondents; quotas, respondent IDs and QC."
   },
   "publicLink": {
     "title": "Public link",
@@ -1034,7 +1150,12 @@
     "deleted": "Response deleted.",
     "demo": "Demo",
     "seconds": "{value}s",
-    "minutes": "{m} min {s} s"
+    "minutes": "{m} min {s} s",
+    "respondentCode": "Respondent ID",
+    "surveyor": "Surveyor",
+    "qcFlags": "QC flags",
+    "reserve": "reserve",
+    "note": "Note"
   },
   "export": {
     "button": "Export",
@@ -1048,7 +1169,15 @@
       "submittedAtLocal": "Submitted at (Asia/Jakarta)",
       "version": "Form version",
       "identifierEmail": "Identifier (email)",
-      "identifierPhone": "Identifier (phone)"
+      "identifierPhone": "Identifier (phone)",
+      "respondentCode": "Respondent ID",
+      "surveyor": "Surveyor",
+      "quotaCell": "Quota cell",
+      "qcStatus": "QC status",
+      "duration": "Duration (seconds)",
+      "notes": "Interviewer notes",
+      "latitude": "latitude",
+      "longitude": "longitude"
     },
     "sheets": {
       "responses": "Responses",
@@ -1067,7 +1196,10 @@
       "min": "Minimum",
       "max": "Maximum",
       "averageLength": "Average length (characters)"
-    }
+    },
+    "codesHint": "Answers as codes (1, 2, 99) for SPSS / analysis",
+    "csvCodes": "CSV (answer codes)",
+    "xlsxCodes": "Excel (answer codes)"
   },
   "share": {
     "button": "Share",
@@ -1339,5 +1471,169 @@
       "scatter": "Each dot is one response. An upward pattern means both values tend to rise together; it is not proof of cause.",
       "histogram": "Each column is one range of values; its height is the number of responses in that range."
     }
+  },
+  "interviews": {
+    "title": "Interviews",
+    "subtitle": "Forms assigned to you. Works without signal; data is sent when online.",
+    "emptyTitle": "No interviews yet",
+    "emptyDescription": "Interview forms assigned to you will appear here.",
+    "myToday": "Today",
+    "myTotal": "My total",
+    "myScreenouts": "Screen-outs",
+    "teamTotal": "{count} complete interviews by all surveyors",
+    "open": "Start interviewing",
+    "closed": "The form is closed.",
+    "onlyTitle": "Interview-only form",
+    "onlyDescription": "This form is filled in by signed-in surveyors.",
+    "openInterview": "Sign in as a surveyor",
+    "offline": "Offline.",
+    "outboxPending": "{count, plural, one {# interview waiting to be sent} other {# interviews waiting to be sent}}",
+    "outboxEmpty": "All interviews have been sent.",
+    "outboxFailed": "{count, plural, other {# refused by the server}}",
+    "syncNow": "Send now",
+    "surveyor": "Surveyor: {name}",
+    "startNew": "New interview",
+    "resume": "Continue interview ({time})",
+    "startedAt": "Started {time}",
+    "cell": "Cell {cell}",
+    "finish": "Finish & send",
+    "next": "Next interview",
+    "doneTitle": "Interview saved",
+    "respondentId": "Respondent ID:",
+    "queuedTitle": "Saved on this device",
+    "queuedDescription": "No connection yet. The interview will be sent automatically when online.",
+    "screenedTitle": "Screen-out recorded",
+    "screenedRule": "The respondent does not qualify ({code}).",
+    "screenedQuota": "Quota cell {cell} is full.",
+    "quotaFull": "Quota cell {cell} is full ({count}/{target}). End this interview.",
+    "quotaAvailable": "The quota cell has room again. Continue the interview.",
+    "errors": {
+      "BAD_REQUEST": "The interview data is invalid. Reload the page and try again.",
+      "PAYLOAD_TOO_LARGE": "The data is too large (photo). Retake the photo and send again.",
+      "UNAUTHORIZED": "Your session expired. The interview is saved; sign in again to send it.",
+      "FORBIDDEN": "You are not assigned to this form.",
+      "NOT_FOUND": "Form not found.",
+      "NOT_CAPI": "This form is not an interview form.",
+      "FORM_CLOSED": "The form is closed.",
+      "INVALID_VERSION": "The form was updated. Reload the page.",
+      "VALIDATION_ERROR": "Some answers need your attention.",
+      "NOTES_REQUIRED": "Interviewer notes are required for some questions.",
+      "QUOTA_AVAILABLE": "The quota cell has room again. Continue the interview.",
+      "SERVER_ERROR": "Server problem. The interview is saved on this device and will be sent again automatically."
+    }
+  },
+  "capi": {
+    "enabled": "Enable interview mode",
+    "enabledHint": "The public link is turned off; only assigned surveyors (or editors) fill it in.",
+    "notes": "Interviewer note field on every question",
+    "notesHint": "Questions marked \"note required\" cannot be sent without a note.",
+    "dimensions": "Quota dimensions & respondent ID",
+    "dimensionsHint": "E.g. City (S10), Sector (S2), Segment (S5). Give each option a group code.",
+    "dimensionLabel": "Dimension name",
+    "dimensionQuestion": "Question",
+    "groupCodeFor": "Group code for {option}",
+    "groupHint": "Options with the same code are grouped (e.g. every bank but BRI = N). Options without a code are outside the quota.",
+    "addDimension": "Add dimension",
+    "removeDimension": "Remove dimension",
+    "cellsPreview": "{count} quota cells, e.g. {example}",
+    "quota": "Quota per cell",
+    "quotaHint": "Full cells are refused and recorded as quota screen-outs.",
+    "target": "Target per cell",
+    "reserve": "Reserve per cell",
+    "checkAfter": "Check quota after question",
+    "respondentId": "Automatic respondent ID",
+    "respondentIdHint": "Format: cell code + sequence, e.g. {example}.",
+    "qc": "Quality control",
+    "qcFields": {
+      "minMinutes": "Minimum duration (minutes)",
+      "maxMinutes": "Maximum duration (minutes)",
+      "backcheckPercent": "Backcheck per surveyor (%)",
+      "otherPercent": "\"Other\" threshold (%)"
+    },
+    "save": "Save interview settings",
+    "saved": "Interview settings saved.",
+    "saveError": "The settings could not be saved.",
+    "search": "Search…",
+    "noMatches": "No matches.",
+    "problems": {
+      "duplicateDimension": "Duplicate dimension.",
+      "dimensionQuestion": "Dimensions must use a multiple choice or dropdown question.",
+      "duplicateGroupCode": "Duplicate group code.",
+      "groupOption": "An option no longer exists.",
+      "needsDimensions": "Quotas and respondent IDs need at least one dimension.",
+      "checkAfter": "The quota check question was not found.",
+      "qcDuration": "The minimum duration must be below the maximum."
+    }
+  },
+  "qc": {
+    "title": "Quota & QC",
+    "complete": "Complete",
+    "screenouts": "Screen-outs",
+    "flagged": "Flagged",
+    "rejected": "Rejected",
+    "backcheck": "Backcheck",
+    "quotaTitle": "Quota matrix",
+    "quotaDescription": "Target {target} per cell (+{reserve} reserve), {cells} cells.",
+    "quotaNoTarget": "Quotas are off; counts per cell.",
+    "count": "Count",
+    "total": "Total",
+    "surveyorsTitle": "Surveyors",
+    "surveyorsDescription": "Backcheck at least {percent}% of each surveyor's interviews.",
+    "surveyor": "Surveyor",
+    "noSurveyor": "(no surveyor)",
+    "avgDuration": "Average duration",
+    "minutes": "{value} min",
+    "selectBackcheck": "Pick a {percent}% backcheck sample",
+    "backcheckSelected": "Backcheck sample picked.",
+    "checksTitle": "Automatic checks",
+    "checksDescription": "Screen-outs by code, duration and identical-answer flags, and high \"Other\" shares.",
+    "screenoutsByCode": "Screen-outs by code",
+    "quotaFull": "Quota full",
+    "flagsTitle": "Flags",
+    "otherTitle": "\"Other\" above {percent}%",
+    "none": "None.",
+    "flags": {
+      "duration_short": "Too fast",
+      "duration_long": "Too long",
+      "straightline": "Identical in {code}"
+    },
+    "interviewsTitle": "Interviews",
+    "views": {
+      "all": "All",
+      "flagged": "Flagged",
+      "backcheck": "Backcheck",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "allSurveyors": "All surveyors",
+    "respondentId": "Respondent ID",
+    "submitted": "Time",
+    "duration": "Duration",
+    "status": "Status",
+    "actions": "Actions",
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "backcheck": "Backcheck",
+      "rejected": "Rejected"
+    },
+    "reserve": "reserve",
+    "approve": "Approve",
+    "approved": "Interview approved.",
+    "toBackcheck": "Backcheck",
+    "markedBackcheck": "Marked for backcheck.",
+    "reject": "Reject",
+    "rejectTitle": "Reject interview {code}?",
+    "rejectDescription": "The interview leaves the dashboard and the quota (the cell opens for a reserve). It can be restored.",
+    "reason": "Reason",
+    "cancel": "Cancel",
+    "rejectedToast": "Interview rejected.",
+    "restore": "Restore",
+    "restored": "Interview restored.",
+    "actionError": "The action failed. Try again.",
+    "empty": "No interviews.",
+    "page": "{from}–{to} of {total}",
+    "previous": "Previous",
+    "next": "Next"
   }
 }

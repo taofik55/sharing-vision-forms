@@ -24,8 +24,8 @@ export type Member = {
   userId: string;
   email: string;
   fullName: string | null;
-  role: "viewer" | "editor";
-  appRole: "admin" | "editor" | "viewer";
+  role: "viewer" | "editor" | "surveyor";
+  appRole: "admin" | "editor" | "viewer" | "surveyor";
 };
 
 type SharingCardProps = {

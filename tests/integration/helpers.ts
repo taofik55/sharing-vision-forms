@@ -24,6 +24,10 @@ export const PUBLIC_TABLES = [
   "dashboards",
   "dashboard_shares",
   "rate_limits",
+  "interview_sequences",
+  "response_photos",
+  "response_screenouts",
+  "response_archive",
 ] as const satisfies readonly (keyof Database["public"]["Tables"])[];
 
 function env() {

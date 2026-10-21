@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseCapiSettings } from "./capi";
 import type { IdentifierMode } from "./identifier";
 import { formDefinitionSchema, type FormDefinition } from "./schema";
 
@@ -29,14 +30,17 @@ export type PublicFormDto = {
 
 export type PublicFormState =
   | { state: "open"; form: PublicFormDto }
+  /** Interview-only form (CAPI): no public link. */
+  | { state: "interview"; title: string; formId: string }
   | { state: "closed"; title: string; closedMessage: string | null }
   | { state: "not_found" };
 
 const FORM_COLUMNS =
-  "id, slug, title, description, status, current_version_id, identifier_mode, deadline_at, closed_message, thank_you_message";
+  "id, slug, title, description, status, current_version_id, identifier_mode, deadline_at, closed_message, thank_you_message, capi_settings";
 
 export type SubmitFormRow = {
   id: string;
+  capi_settings: unknown;
   status: "draft" | "published" | "closed" | "archived";
   current_version_id: string | null;
   identifier_mode: IdentifierMode;
@@ -57,7 +61,9 @@ export async function findFormForRespondent(
   if (!SLUG.test(slug)) return null;
   const { data } = await createAdminClient()
     .from("forms")
-    .select("id, status, current_version_id, identifier_mode, deadline_at")
+    .select(
+      "id, status, current_version_id, identifier_mode, deadline_at, capi_settings",
+    )
     .eq("slug", slug)
     .maybeSingle();
   return data;
@@ -92,6 +98,9 @@ export const loadPublicForm = cache(
     // Never-published drafts do not exist publicly.
     if (!form || !form.current_version_id || form.status === "draft")
       return { state: "not_found" };
+
+    if (parseCapiSettings(form.capi_settings).enabled)
+      return { state: "interview", title: form.title, formId: form.id };
 
     if (form.status !== "published" || isPastDeadline(form.deadline_at)) {
       return {

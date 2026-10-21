@@ -2,7 +2,9 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
+import { analysisQuestions, expandQuestion } from "@/lib/forms/analysis";
 import {
+  flattenQuestions,
   formDefinitionSchema,
   type FormDefinition,
   type Question,
@@ -35,9 +37,11 @@ export async function loadFormVersions(
     const parsed = formDefinitionSchema.safeParse(row.definition);
     if (!parsed.success) continue;
     versions.push({ id: row.id, number: row.version_number });
-    for (const section of parsed.data.sections) {
-      for (const q of section.questions) questions[q.key] = q; // later versions win
-    }
+    // Analysis view: grid rows and ranking positions as their own questions.
+    const all = flattenQuestions(parsed.data);
+    const byKey = new Map(all.map((q) => [q.key, q]));
+    for (const q of all)
+      for (const aq of expandQuestion(q, byKey)) questions[aq.key] = aq; // later versions win
     if (row.id === currentVersionId) current = parsed.data;
   }
   return { versions, questions, current };
@@ -48,8 +52,9 @@ export function orderedQuestions(
   questions: Record<string, Question>,
   current: FormDefinition | null,
 ): Question[] {
-  const currentKeys =
-    current?.sections.flatMap((s) => s.questions.map((q) => q.key)) ?? [];
+  const currentKeys = current
+    ? analysisQuestions(current).map((q) => q.key)
+    : [];
   const seen = new Set(currentKeys);
   return [
     ...currentKeys.map((key) => questions[key]).filter(Boolean),

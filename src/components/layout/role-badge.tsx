@@ -6,6 +6,7 @@ const VARIANTS = {
   admin: "default",
   editor: "secondary",
   viewer: "outline",
+  surveyor: "outline",
 } as const satisfies Record<AppRole, "default" | "secondary" | "outline">;
 
 export function RoleBadge({ role }: { role: AppRole }) {

@@ -6,6 +6,7 @@ export const APP_ROLES = [
   "admin",
   "editor",
   "viewer",
+  "surveyor",
 ] as const satisfies readonly AppRole[];
 
 export function isAppRole(value: unknown): value is AppRole {
@@ -23,7 +24,13 @@ export function isAdmin(role: AppRole): boolean {
   return role === "admin";
 }
 
-export type NavItemKey = "home" | "forms" | "users" | "demoTools";
+export type NavItemKey =
+  "home" | "forms" | "interviews" | "users" | "demoTools";
+
+/** Field staff: interviews only (no forms, dashboards or responses). */
+export function isSurveyor(role: AppRole): boolean {
+  return role === "surveyor";
+}
 
 export type NavItem = {
   key: NavItemKey;
@@ -33,9 +40,12 @@ export type NavItem = {
 
 /** Role-aware sidebar navigation. Hrefs are locale-less (next-intl adds the prefix). */
 export function getNavItems(role: AppRole): NavItem[] {
+  if (isSurveyor(role))
+    return [{ key: "interviews", href: "/interviews", section: "main" }];
   const items: NavItem[] = [
     { key: "home", href: "/", section: "main" },
     { key: "forms", href: "/forms", section: "main" },
+    { key: "interviews", href: "/interviews", section: "main" },
   ];
   if (isAdmin(role)) {
     items.push(

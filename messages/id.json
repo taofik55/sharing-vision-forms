@@ -21,7 +21,8 @@
     "adminSection": "Administrasi",
     "users": "Pengguna",
     "demoTools": "Alat demo",
-    "openMenu": "Buka menu"
+    "openMenu": "Buka menu",
+    "interviews": "Wawancara"
   },
   "header": {
     "userMenu": "Menu akun",
@@ -42,7 +43,8 @@
   "roles": {
     "admin": "Admin",
     "editor": "Editor",
-    "viewer": "Peninjau"
+    "viewer": "Peninjau",
+    "surveyor": "Surveyor"
   },
   "auth": {
     "loginTitle": "Masuk ke SV Form App",
@@ -388,7 +390,8 @@
     "slugTaken": "Tautan ini sudah dipakai formulir lain.",
     "userNotFound": "Tidak ada pengguna aktif dengan email ini.",
     "ownerCannotBeMember": "Pemilik sudah memiliki akses penuh.",
-    "generic": "Terjadi kesalahan. Silakan coba lagi."
+    "generic": "Terjadi kesalahan. Silakan coba lagi.",
+    "invalidCapi": "Pengaturan wawancara belum valid."
   },
   "formNav": {
     "label": "Bagian formulir",
@@ -396,7 +399,8 @@
     "settings": "Pengaturan",
     "dashboard": "Dasbor",
     "responses": "Jawaban",
-    "backToForms": "Semua formulir"
+    "backToForms": "Semua formulir",
+    "qc": "Kuota & QC"
   },
   "questionTypes": {
     "short_text": "Jawaban singkat",
@@ -409,7 +413,11 @@
     "rating": "Penilaian bintang",
     "linear_scale": "Skala linear",
     "email": "Email",
-    "phone": "Telepon"
+    "phone": "Telepon",
+    "grid": "Grid / matriks",
+    "ranking": "Peringkat",
+    "location": "Lokasi GPS",
+    "photo": "Foto"
   },
   "operators": {
     "equals": "adalah",
@@ -420,7 +428,10 @@
     "gtDate": "setelah",
     "ltDate": "sebelum",
     "is_answered": "dijawab",
-    "is_empty": "kosong"
+    "is_empty": "kosong",
+    "not_contains": "tidak mencakup",
+    "same_as": "sama dengan jawaban",
+    "not_same_as": "beda dari jawaban"
   },
   "problems": {
     "invalidStructure": "Data formulir rusak. Muat ulang penyusun.",
@@ -444,7 +455,18 @@
     "conditionForwardReference": "Kondisi merujuk ke pertanyaan yang ada setelahnya. Pindahkan ke atas.",
     "conditionInvalidOperator": "Kondisi memakai operator yang tidak sesuai jenis pertanyaan.",
     "conditionMissingValue": "Kondisi belum memiliki nilai.",
-    "conditionInvalidValue": "Kondisi memakai nilai yang sudah tidak ada."
+    "conditionInvalidValue": "Kondisi memakai nilai yang sudah tidak ada.",
+    "duplicateCode": "Kode pertanyaan dipakai lebih dari sekali.",
+    "tooFewRows": "Grid butuh minimal satu baris.",
+    "emptyRowLabel": "Ada baris grid yang kosong.",
+    "duplicateRowId": "Ada baris grid ganda.",
+    "keyTooLong": "Kunci pertanyaan + baris terlalu panjang.",
+    "invalidRanking": "Jumlah peringkat melebihi jumlah opsi.",
+    "invalidReference": "Pengaturan merujuk pertanyaan yang tidak ada, berada setelahnya, atau tipenya tidak cocok.",
+    "ruleMissingTarget": "Aturan lompat belum punya tujuan.",
+    "ruleUnknownTarget": "Tujuan lompat tidak ditemukan.",
+    "ruleBackwardJump": "Lompatan harus ke pertanyaan atau bagian berikutnya.",
+    "ruleTerminateWithoutCondition": "Aturan screen-out butuh syarat."
   },
   "builder": {
     "palette": "Tambah pertanyaan",
@@ -553,7 +575,43 @@
       "key": "Kunci",
       "keyHint": "Id tetap yang dipakai jawaban dan analitik. Tidak pernah berubah.",
       "advanced": "Pengaturan lanjutan",
-      "advancedHint": "Judul, deskripsi, placeholder, opsi, dan “wajib diisi” diubah langsung di kartu."
+      "advancedHint": "Judul, deskripsi, placeholder, opsi, dan “wajib diisi” diubah langsung di kartu.",
+      "code": "Kode pertanyaan",
+      "codeHint": "Contoh S1, A2. Tampil untuk surveyor, di ekspor, dan bisa dipakai di teks sebagai [S1].",
+      "codePlaceholder": "Kode",
+      "optionCode": "Kode opsi {number}",
+      "exclusiveOption": "Eksklusif (menghapus pilihan lain, mis. \"Tidak ada\")",
+      "gridRows": "Baris (pernyataan)",
+      "gridColumns": "Kolom (skala / pilihan)",
+      "addRow": "Tambah baris",
+      "rankingMax": "Maksimal yang diurutkan",
+      "rankingHint": "Responden memilih lalu mengurutkan (MA-3 = 3).",
+      "grid": "Grid",
+      "gridMultiple": "Boleh lebih dari satu kolom per baris",
+      "rowsFrom": "Baris diambil dari jawaban",
+      "rowsFixed": "Baris tetap (ditulis di bawah)",
+      "rowsFromHint": "Contoh: baris = bank yang dipilih di B1.",
+      "randomizeRows": "Acak urutan baris",
+      "straightlining": "Tandai jawaban seragam (QC)",
+      "maxPerColumn": "Batas baris per kolom",
+      "column": "Kolom",
+      "maxRows": "Maks. baris",
+      "addLimit": "Tambah batas",
+      "removeLimit": "Hapus batas",
+      "optionSources": "Opsi & urutan",
+      "randomizeOptions": "Acak urutan opsi",
+      "orderLike": "Urutan acak sama dengan",
+      "ownOrder": "Urutan sendiri",
+      "optionsFrom": "Opsi diambil dari jawaban",
+      "allOptions": "Semua opsi",
+      "fromSelected": "Yang dipilih",
+      "fromUnselected": "Yang tidak dipilih",
+      "optionsFromHint": "Opsi dicocokkan dengan label, lalu kode.",
+      "autoSelectFrom": "Centang otomatis dari jawaban",
+      "notSameAs": "Tidak boleh sama dengan",
+      "none": "Tidak ada",
+      "noteRequired": "Catatan surveyor wajib",
+      "noteRequiredHint": "Untuk wawancara: catatan kosong menahan pengiriman."
     },
     "logic": {
       "title": "Logika",
@@ -568,7 +626,8 @@
       "chooseValue": "Pilih nilai",
       "addCondition": "Tambah kondisi",
       "removeCondition": "Hapus kondisi",
-      "noEarlierQuestions": "Logika hanya dapat memakai pertanyaan yang berada sebelum pertanyaan ini."
+      "noEarlierQuestions": "Logika hanya dapat memakai pertanyaan yang berada sebelum pertanyaan ini.",
+      "otherQuestion": "Pertanyaan pembanding"
     },
     "previewDialog": {
       "title": "Pratinjau",
@@ -591,7 +650,28 @@
       "dropdownSummary": "{count} opsi, bisa dicari",
       "moreOptions": "+{count} opsi lainnya",
       "datePreview": "hh/bb/tttt",
-      "moreOnRight": "Atur skala, jumlah bintang, atau batas tanggal di panel kanan."
+      "moreOnRight": "Atur skala, jumlah bintang, atau batas tanggal di panel kanan.",
+      "rankingSummary": "Urutkan maksimal {max} dari {count} opsi",
+      "gridSummary": "{rows} baris × {columns} kolom",
+      "rowsFromSummary": "Baris diambil dari jawaban sebelumnya",
+      "locationPreview": "Lokasi GPS perangkat",
+      "photoPreview": "Foto dari kamera"
+    },
+    "row": "Baris {number}",
+    "rules": {
+      "title": "Screen-out & lompat",
+      "hint": "Dijalankan setelah pertanyaan ini dijawab, sesuai urutan.",
+      "action": "Aksi",
+      "terminate": "Hentikan (screen-out)",
+      "jump": "Lompat ke",
+      "target": "Tujuan lompat",
+      "section": "Bagian",
+      "when": "Jika",
+      "onlyIf": "Hanya jika",
+      "reason": "Alasan (tampil ke surveyor)",
+      "remove": "Hapus aturan",
+      "addTerminate": "Screen-out",
+      "addJump": "Lompat"
     }
   },
   "renderer": {
@@ -626,10 +706,43 @@
       "invalidOption": "Pilih salah satu opsi.",
       "otherRequired": "Jelaskan jawaban “Lainnya” Anda.",
       "tooFewSelections": "Pilih lebih banyak opsi.",
-      "tooManySelections": "Pilih lebih sedikit opsi."
+      "tooManySelections": "Pilih lebih sedikit opsi.",
+      "exclusiveOption": "Opsi ini tidak bisa dipilih bersama opsi lain.",
+      "rowsRequired": "Isi semua baris.",
+      "tooManyInColumn": "Terlalu banyak baris memilih kolom yang sama.",
+      "sameAsOther": "Jawaban ini tidak boleh sama dengan jawaban sebelumnya.",
+      "lockedOption": "Opsi dari jawaban sebelumnya tidak boleh dihapus.",
+      "invalidLocation": "Lokasi tidak valid.",
+      "invalidPhoto": "Foto tidak valid atau terlalu besar.",
+      "noteRequired": "Catatan surveyor wajib diisi."
     },
     "searchOptions": "Cari…",
-    "noMatches": "Tidak ada opsi yang cocok."
+    "noMatches": "Tidak ada opsi yang cocok.",
+    "surveyorNote": "Catatan surveyor",
+    "surveyorNotePlaceholder": "Ringkasan jawaban responden",
+    "lockedOption": "Terpilih dari jawaban sebelumnya",
+    "noOptionsYet": "Belum ada opsi: jawab pertanyaan sebelumnya dulu.",
+    "noRowsYet": "Belum ada baris: jawab pertanyaan sebelumnya dulu.",
+    "rankingHint": "Pilih maksimal {max}, urut dari yang paling penting.",
+    "rankingChosen": "Urutan yang dipilih",
+    "rankingUp": "Naikkan",
+    "rankingRemove": "Hapus dari urutan",
+    "locationEmpty": "Lokasi belum diambil.",
+    "locationCapture": "Ambil lokasi GPS",
+    "locationRetry": "Ambil ulang",
+    "locationAccuracy": "akurasi ±{meters} m",
+    "locationDenied": "Izin lokasi ditolak. Aktifkan lokasi di browser lalu coba lagi.",
+    "locationUnavailable": "Lokasi tidak tersedia di perangkat ini.",
+    "photoTake": "Ambil foto",
+    "photoRetake": "Ambil ulang",
+    "photoRemove": "Hapus foto",
+    "photoPreview": "Pratinjau foto",
+    "photoFailed": "Foto gagal diproses. Coba lagi.",
+    "screenOutTitle": "Responden tidak memenuhi kriteria",
+    "screenOutCode": "Screen-out pada {code}.",
+    "screenOutDefault": "Wawancara dihentikan oleh aturan penyaringan.",
+    "screenOutSubmit": "Akhiri wawancara (screen-out)",
+    "screenOutDone": "Terima kasih atas waktunya. Anda tidak termasuk kriteria responden survei ini."
   },
   "formSettings": {
     "title": "Pengaturan",
@@ -676,7 +789,8 @@
     "removeLabel": "Hapus {name}",
     "memberRole": {
       "viewer": "Dapat melihat",
-      "editor": "Dapat mengubah"
+      "editor": "Dapat mengubah",
+      "surveyor": "Surveyor"
     },
     "memberRoleLabel": "Akses untuk {name}",
     "viewerAppRoleNote": "Akun hanya-baca: tidak dapat mengubah meski diberi akses ubah.",
@@ -694,7 +808,9 @@
     "archive": "Arsipkan",
     "restore": "Pulihkan",
     "deleteDescription": "Hapus formulir dan semua jawaban secara permanen.",
-    "delete": "Hapus formulir"
+    "delete": "Hapus formulir",
+    "capi": "Wawancara tatap muka (CAPI)",
+    "capiDescription": "Surveyor login dan mewawancarai responden; kuota, ID responden, dan QC."
   },
   "publicLink": {
     "title": "Tautan publik",
@@ -1034,7 +1150,12 @@
     "deleted": "Jawaban dihapus.",
     "demo": "Demo",
     "seconds": "{value} dtk",
-    "minutes": "{m} mnt {s} dtk"
+    "minutes": "{m} mnt {s} dtk",
+    "respondentCode": "ID responden",
+    "surveyor": "Surveyor",
+    "qcFlags": "Tanda QC",
+    "reserve": "cadangan",
+    "note": "Catatan"
   },
   "export": {
     "button": "Ekspor",
@@ -1048,7 +1169,15 @@
       "submittedAtLocal": "Dikirim pada (Asia/Jakarta)",
       "version": "Versi formulir",
       "identifierEmail": "Identitas (email)",
-      "identifierPhone": "Identitas (telepon)"
+      "identifierPhone": "Identitas (telepon)",
+      "respondentCode": "ID responden",
+      "surveyor": "Surveyor",
+      "quotaCell": "Sel kuota",
+      "qcStatus": "Status QC",
+      "duration": "Durasi (detik)",
+      "notes": "Catatan surveyor",
+      "latitude": "lintang",
+      "longitude": "bujur"
     },
     "sheets": {
       "responses": "Respons",
@@ -1067,7 +1196,10 @@
       "min": "Minimum",
       "max": "Maksimum",
       "averageLength": "Rata-rata panjang (karakter)"
-    }
+    },
+    "codesHint": "Jawaban sebagai kode (1, 2, 99) untuk SPSS/olah data",
+    "csvCodes": "CSV (kode jawaban)",
+    "xlsxCodes": "Excel (kode jawaban)"
   },
   "share": {
     "button": "Bagikan",
@@ -1339,5 +1471,169 @@
       "scatter": "Setiap titik adalah satu respons. Pola naik berarti kedua nilai cenderung naik bersama; bukan bukti sebab-akibat.",
       "histogram": "Setiap kolom adalah satu rentang nilai; tingginya adalah jumlah respons di rentang itu."
     }
+  },
+  "interviews": {
+    "title": "Wawancara",
+    "subtitle": "Formulir yang ditugaskan kepada Anda. Bisa dipakai tanpa sinyal; data dikirim saat online.",
+    "emptyTitle": "Belum ada wawancara",
+    "emptyDescription": "Formulir wawancara yang ditugaskan kepada Anda akan muncul di sini.",
+    "myToday": "Hari ini",
+    "myTotal": "Total saya",
+    "myScreenouts": "Screen-out",
+    "teamTotal": "{count} wawancara lengkap oleh semua surveyor",
+    "open": "Mulai wawancara",
+    "closed": "Formulir ditutup.",
+    "onlyTitle": "Formulir khusus wawancara",
+    "onlyDescription": "Formulir ini diisi oleh surveyor yang login.",
+    "openInterview": "Masuk sebagai surveyor",
+    "offline": "Offline.",
+    "outboxPending": "{count, plural, other {# wawancara menunggu dikirim}}",
+    "outboxEmpty": "Semua wawancara sudah terkirim.",
+    "outboxFailed": "{count, plural, other {# ditolak server}}",
+    "syncNow": "Kirim sekarang",
+    "surveyor": "Surveyor: {name}",
+    "startNew": "Wawancara baru",
+    "resume": "Lanjutkan wawancara ({time})",
+    "startedAt": "Mulai {time}",
+    "cell": "Sel {cell}",
+    "finish": "Selesai & kirim",
+    "next": "Wawancara berikutnya",
+    "doneTitle": "Wawancara tersimpan",
+    "respondentId": "ID responden:",
+    "queuedTitle": "Tersimpan di perangkat",
+    "queuedDescription": "Belum ada koneksi. Wawancara akan dikirim otomatis saat online.",
+    "screenedTitle": "Screen-out tercatat",
+    "screenedRule": "Responden tidak memenuhi kriteria ({code}).",
+    "screenedQuota": "Kuota sel {cell} sudah penuh.",
+    "quotaFull": "Kuota sel {cell} sudah penuh ({count}/{target}). Akhiri wawancara ini.",
+    "quotaAvailable": "Sel kuota masih tersedia. Lanjutkan wawancara.",
+    "errors": {
+      "BAD_REQUEST": "Data wawancara tidak valid. Muat ulang halaman lalu coba lagi.",
+      "PAYLOAD_TOO_LARGE": "Data terlalu besar (foto). Ambil ulang foto lalu kirim lagi.",
+      "UNAUTHORIZED": "Sesi login habis. Wawancara disimpan; login lagi untuk mengirim.",
+      "FORBIDDEN": "Anda tidak ditugaskan untuk formulir ini.",
+      "NOT_FOUND": "Formulir tidak ditemukan.",
+      "NOT_CAPI": "Formulir ini bukan formulir wawancara.",
+      "FORM_CLOSED": "Formulir sudah ditutup.",
+      "INVALID_VERSION": "Formulir sudah diperbarui. Muat ulang halaman.",
+      "VALIDATION_ERROR": "Ada jawaban yang perlu diperbaiki.",
+      "NOTES_REQUIRED": "Catatan surveyor wajib diisi untuk beberapa pertanyaan.",
+      "QUOTA_AVAILABLE": "Sel kuota masih tersedia. Lanjutkan wawancara.",
+      "SERVER_ERROR": "Server bermasalah. Wawancara disimpan di perangkat dan dikirim ulang otomatis."
+    }
+  },
+  "capi": {
+    "enabled": "Aktifkan mode wawancara",
+    "enabledHint": "Link publik dimatikan; hanya surveyor yang ditugaskan (atau editor) yang bisa mengisi.",
+    "notes": "Kolom catatan surveyor di setiap pertanyaan",
+    "notesHint": "Pertanyaan bertanda \"catatan wajib\" tidak bisa dikirim tanpa catatan.",
+    "dimensions": "Dimensi kuota & ID responden",
+    "dimensionsHint": "Contoh: Kota (S10), Sektor (S2), Segmen (S5). Isi kode kelompok untuk setiap opsi.",
+    "dimensionLabel": "Nama dimensi",
+    "dimensionQuestion": "Pertanyaan",
+    "groupCodeFor": "Kode kelompok untuk {option}",
+    "groupHint": "Opsi dengan kode sama digabung (mis. semua bank selain BRI = N). Opsi tanpa kode tidak masuk kuota.",
+    "addDimension": "Tambah dimensi",
+    "removeDimension": "Hapus dimensi",
+    "cellsPreview": "{count} sel kuota, contoh {example}",
+    "quota": "Kuota per sel",
+    "quotaHint": "Sel yang penuh ditolak dan dicatat sebagai screen-out kuota.",
+    "target": "Target per sel",
+    "reserve": "Cadangan per sel",
+    "checkAfter": "Cek kuota setelah pertanyaan",
+    "respondentId": "ID responden otomatis",
+    "respondentIdHint": "Format: kode sel + nomor urut, mis. {example}.",
+    "qc": "Kontrol kualitas",
+    "qcFields": {
+      "minMinutes": "Durasi minimum (menit)",
+      "maxMinutes": "Durasi maksimum (menit)",
+      "backcheckPercent": "Backcheck per surveyor (%)",
+      "otherPercent": "Batas \"Lainnya\" (%)"
+    },
+    "save": "Simpan pengaturan wawancara",
+    "saved": "Pengaturan wawancara tersimpan.",
+    "saveError": "Pengaturan belum bisa disimpan.",
+    "search": "Cari…",
+    "noMatches": "Tidak ada yang cocok.",
+    "problems": {
+      "duplicateDimension": "Ada dimensi ganda.",
+      "dimensionQuestion": "Dimensi harus memakai pertanyaan pilihan ganda atau dropdown.",
+      "duplicateGroupCode": "Kode kelompok ganda.",
+      "groupOption": "Ada opsi yang sudah tidak ada.",
+      "needsDimensions": "Kuota dan ID responden butuh minimal satu dimensi.",
+      "checkAfter": "Pertanyaan cek kuota tidak ditemukan.",
+      "qcDuration": "Durasi minimum harus lebih kecil dari maksimum."
+    }
+  },
+  "qc": {
+    "title": "Kuota & QC",
+    "complete": "Lengkap",
+    "screenouts": "Screen-out",
+    "flagged": "Ditandai",
+    "rejected": "Ditolak",
+    "backcheck": "Backcheck",
+    "quotaTitle": "Matriks kuota",
+    "quotaDescription": "Target {target} per sel (+{reserve} cadangan), {cells} sel.",
+    "quotaNoTarget": "Kuota tidak diaktifkan; jumlah per sel.",
+    "count": "Jumlah",
+    "total": "Total",
+    "surveyorsTitle": "Surveyor",
+    "surveyorsDescription": "Backcheck minimal {percent}% wawancara per surveyor.",
+    "surveyor": "Surveyor",
+    "noSurveyor": "(tanpa surveyor)",
+    "avgDuration": "Rata-rata durasi",
+    "minutes": "{value} mnt",
+    "selectBackcheck": "Pilih sampel backcheck {percent}%",
+    "backcheckSelected": "Sampel backcheck dipilih.",
+    "checksTitle": "Pemeriksaan otomatis",
+    "checksDescription": "Screen-out per kode, tanda durasi & jawaban seragam, serta \"Lainnya\" yang tinggi.",
+    "screenoutsByCode": "Screen-out per kode",
+    "quotaFull": "Kuota penuh",
+    "flagsTitle": "Tanda",
+    "otherTitle": "\"Lainnya\" di atas {percent}%",
+    "none": "Tidak ada.",
+    "flags": {
+      "duration_short": "Terlalu cepat",
+      "duration_long": "Terlalu lama",
+      "straightline": "Seragam di {code}"
+    },
+    "interviewsTitle": "Daftar wawancara",
+    "views": {
+      "all": "Semua",
+      "flagged": "Ditandai",
+      "backcheck": "Backcheck",
+      "approved": "Disetujui",
+      "rejected": "Ditolak"
+    },
+    "allSurveyors": "Semua surveyor",
+    "respondentId": "ID responden",
+    "submitted": "Waktu",
+    "duration": "Durasi",
+    "status": "Status",
+    "actions": "Aksi",
+    "statuses": {
+      "pending": "Menunggu",
+      "approved": "Disetujui",
+      "backcheck": "Backcheck",
+      "rejected": "Ditolak"
+    },
+    "reserve": "cadangan",
+    "approve": "Setujui",
+    "approved": "Wawancara disetujui.",
+    "toBackcheck": "Backcheck",
+    "markedBackcheck": "Ditandai untuk backcheck.",
+    "reject": "Tolak",
+    "rejectTitle": "Tolak wawancara {code}?",
+    "rejectDescription": "Wawancara keluar dari dasbor dan kuota (sel terbuka lagi untuk cadangan). Bisa dipulihkan.",
+    "reason": "Alasan",
+    "cancel": "Batal",
+    "rejectedToast": "Wawancara ditolak.",
+    "restore": "Pulihkan",
+    "restored": "Wawancara dipulihkan.",
+    "actionError": "Aksi gagal. Coba lagi.",
+    "empty": "Tidak ada wawancara.",
+    "page": "{from}–{to} dari {total}",
+    "previous": "Sebelumnya",
+    "next": "Berikutnya"
   }
 }

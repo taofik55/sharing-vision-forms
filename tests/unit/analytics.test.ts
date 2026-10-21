@@ -106,6 +106,11 @@ describe("buildAutoDashboard", () => {
       linear_scale: "column",
       email: null,
       phone: null,
+      // Expanded into analysis questions (rows, positions) or not charted.
+      grid: null,
+      ranking: null,
+      location: null,
+      photo: null,
     };
     for (const type of QUESTION_TYPES) {
       const q = question({ key: "k", type, options: yesNo });
@@ -123,7 +128,11 @@ describe("buildAutoDashboard", () => {
       } else {
         expect(defaultChart(q)).toBe(expected[type]);
       }
-      expect(hasWidget(type)).toBe(type !== "email" && type !== "phone");
+      expect(hasWidget(type)).toBe(
+        expected[type] !== null ||
+          type === "multiple_choice" ||
+          type === "dropdown",
+      );
       if (hasWidget(type))
         expect(allowedCharts(type)).toContain(defaultChart(q));
     }

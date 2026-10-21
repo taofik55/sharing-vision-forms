@@ -3,6 +3,7 @@
  * Default chart per question type, allowed alternatives, 12-column layout
  * with widgets grouped under their section titles.
  */
+import { analysisQuestions, expandQuestion } from "@/lib/forms/analysis";
 import {
   flattenQuestions,
   type FormDefinition,
@@ -21,7 +22,9 @@ export const GRID_COLUMNS = 12;
 
 /** Question types that get a widget (email/phone are only counted in the overview). */
 export function hasWidget(type: QuestionType): boolean {
-  return type !== "email" && type !== "phone";
+  return !["email", "phone", "location", "photo", "grid", "ranking"].includes(
+    type,
+  );
 }
 
 export function defaultChart(question: Question): ChartType | null {
@@ -173,8 +176,10 @@ function overviewWidgets(): Widget[] {
 /** Widgets for each section: a heading followed by its question widgets. */
 export function sectionWidgets(definition: FormDefinition): Widget[] {
   const out: Widget[] = [];
+  const byKey = new Map(flattenQuestions(definition).map((q) => [q.key, q]));
   for (const section of definition.sections) {
     const questions = section.questions
+      .flatMap((q) => expandQuestion(q, byKey))
       .map(questionWidget)
       .filter((w): w is Widget => w !== null);
     if (!questions.length) continue;
@@ -196,6 +201,6 @@ export function buildAutoDashboard(
   return {
     configVersion: CONFIG_VERSION,
     widgets: packLayout([...overviewWidgets(), ...sectionWidgets(definition)]),
-    knownKeys: flattenQuestions(definition).map((q) => q.key),
+    knownKeys: analysisQuestions(definition).map((q) => q.key),
   };
 }

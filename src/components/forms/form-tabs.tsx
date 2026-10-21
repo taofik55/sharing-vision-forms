@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/lib/i18n/navigation";
 import { cn } from "@/lib/utils";
 
-export type FormTab = "builder" | "settings" | "dashboard" | "responses";
+export type FormTab = "builder" | "settings" | "dashboard" | "responses" | "qc";
 
 export function FormTabs({
   formId,

@@ -39,6 +39,7 @@ import {
   type RpcFilters,
 } from "@/lib/analytics/filters";
 import type { DashboardBundle } from "@/lib/analytics/types";
+import { analysisQuestions } from "@/lib/forms/analysis";
 import { newId } from "@/lib/forms/operations";
 import type { FormDefinition, Question } from "@/lib/forms/schema";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
@@ -419,10 +420,7 @@ function DashboardViewInner(props: Omit<DashboardViewProps, "source">) {
   }
 
   const currentKeys = useMemo(
-    () =>
-      new Set(
-        props.definition.sections.flatMap((s) => s.questions.map((q) => q.key)),
-      ),
+    () => new Set(analysisQuestions(props.definition).map((q) => q.key)),
     [props.definition],
   );
   const sectionTitles = useMemo(
@@ -819,7 +817,7 @@ function DashboardHeader({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-80">
           {editMode ? (
             <div className="flex max-w-2xl flex-col gap-2">
               <Input

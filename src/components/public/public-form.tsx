@@ -80,6 +80,7 @@ export function PublicForm({ form }: { form: PublicFormDto }) {
   } | null>(null);
   const [resumeDraft, setResumeDraft] = useState<LocalDraft | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [screenedOut, setScreenedOut] = useState(false);
 
   // ---------------------------------------------------------------------------
   // Start / resume
@@ -267,6 +268,7 @@ export function PublicForm({ form }: { form: PublicFormDto }) {
         .catch(() => null)) as SubmitResponse | null;
       if (!body) throw new Error("bad response");
       if (body.ok) {
+        setScreenedOut(body.screenedOut === true);
         writeLocalDraft(form.formId, null);
         snapshot.current = null;
         setPhase("done");
@@ -363,8 +365,13 @@ export function PublicForm({ form }: { form: PublicFormDto }) {
           <CardDescription>{form.title}</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="whitespace-pre-line">
-            {form.thankYouMessage || tr("thankYouDefault")}
+          <p
+            className="whitespace-pre-line"
+            data-testid={screenedOut ? "screened-out" : undefined}
+          >
+            {screenedOut
+              ? tr("screenOutDone")
+              : form.thankYouMessage || tr("thankYouDefault")}
           </p>
         </CardContent>
         {!needsIdentifier && (
@@ -412,6 +419,8 @@ export function PublicForm({ form }: { form: PublicFormDto }) {
         sectionId={sectionId}
         onSectionChange={changeSection}
         onComplete={submit}
+        onScreenOut={(kept) => void submit(kept)}
+        seed={submissionToken}
         submitting={submitting}
         honeypot={{
           value: honeypot,

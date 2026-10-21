@@ -1,15 +1,19 @@
 import { randomUUID } from "node:crypto";
 import { getTranslations } from "next-intl/server";
 import type { NextRequest } from "next/server";
+import { parseCapiSettings } from "@/lib/forms/capi";
 import { buildIdentifier } from "@/lib/forms/identifier";
-import type { Answers } from "@/lib/forms/logic";
+import { extractPhotos, withoutPhotos } from "@/lib/forms/interview-server";
+import { computeFlow, type Answers } from "@/lib/forms/logic";
 import {
   findFormForRespondent,
   isPastDeadline,
   loadVersionDefinition,
 } from "@/lib/forms/public";
+import { flattenQuestions } from "@/lib/forms/schema";
 import {
   MAX_PAYLOAD_BYTES,
+  MAX_PHOTO_PAYLOAD_BYTES,
   MIN_FILL_MS,
   detectDevice,
   durationSeconds,
@@ -60,11 +64,12 @@ async function fail(
   });
 }
 
-function ok(responseId: string, replayed = false) {
+function ok(responseId: string, replayed = false, screenedOut = false) {
   const body: SubmitResponse = {
     ok: true,
     responseId,
     ...(replayed ? { replayed } : {}),
+    ...(screenedOut ? { screenedOut } : {}),
   };
   return Response.json(body, { headers: { "Cache-Control": "no-store" } });
 }
@@ -96,11 +101,13 @@ export async function POST(
   ]);
   if (!perForm || !global) return fail("RATE_LIMITED", locale);
 
-  // Size limit before parsing (100 KB).
+  // Size limit before parsing (100 KB; 8 MB for forms with photos, checked below).
   const declared = Number(request.headers.get("content-length") ?? 0);
-  if (declared > MAX_PAYLOAD_BYTES) return fail("PAYLOAD_TOO_LARGE", locale);
+  if (declared > MAX_PHOTO_PAYLOAD_BYTES)
+    return fail("PAYLOAD_TOO_LARGE", locale);
   const raw = await request.text();
-  if (Buffer.byteLength(raw, "utf8") > MAX_PAYLOAD_BYTES)
+  const rawBytes = Buffer.byteLength(raw, "utf8");
+  if (rawBytes > MAX_PHOTO_PAYLOAD_BYTES)
     return fail("PAYLOAD_TOO_LARGE", locale);
 
   let json: unknown;
@@ -123,6 +130,9 @@ export async function POST(
   const form = await findFormForRespondent(slug);
   if (!form || !form.current_version_id || form.status === "draft")
     return fail("NOT_FOUND", locale);
+  // Interview-only forms are filled by signed-in surveyors (/api/interviews).
+  if (parseCapiSettings(form.capi_settings).enabled)
+    return fail("NOT_FOUND", locale);
 
   // Idempotent replay: a retried request with the same token gets the original answer.
   const { data: existing } = await admin
@@ -140,8 +150,45 @@ export async function POST(
   const definition = await loadVersionDefinition(form.id, payload.versionId);
   if (!definition) return fail("INVALID_VERSION", locale);
 
+  const hasPhotos = flattenQuestions(definition).some(
+    (q) => q.type === "photo",
+  );
+  if (!hasPhotos && rawBytes > MAX_PAYLOAD_BYTES)
+    return fail("PAYLOAD_TOO_LARGE", locale);
+
+  // A screening rule ended the form: keep the answers so far as a screen-out.
+  const answers = payload.answers as Answers;
+  const flow = computeFlow(definition, answers);
+  if (flow.terminated) {
+    const visible = new Set(flow.visible.map((q) => q.key));
+    const { data: screenoutId, error: soError } = await admin.rpc(
+      "record_screenout",
+      {
+        p_form_id: form.id,
+        p_version_id: payload.versionId,
+        p_submission_token: payload.submissionToken,
+        p_kind: "rule",
+        p_question_key: flow.terminated.questionKey,
+        p_question_code: flow.terminated.code ?? undefined,
+        p_reason: flow.terminated.reason ?? undefined,
+        p_answers: Object.fromEntries(
+          Object.entries(withoutPhotos(definition, answers)).filter(([k]) =>
+            visible.has(k),
+          ),
+        ) as never,
+        p_duration_seconds: durationSeconds(payload.startedAt, now),
+        p_locale: payload.locale,
+        p_device: detectDevice(request.headers.get("user-agent")),
+      },
+    );
+    if (soError || !screenoutId) return fail("SERVER_ERROR", locale);
+    return ok(screenoutId, false, true);
+  }
+
   // 5. Validate: hidden questions and unknown keys are dropped; text capped.
-  const prepared = prepareAnswers(definition, payload.answers as Answers);
+  const photos = extractPhotos(definition, answers);
+  if (!photos) return fail("VALIDATION_ERROR", locale, { errors: {} });
+  const prepared = prepareAnswers(definition, answers, photos.photoIds);
   if (!prepared.ok)
     return fail("VALIDATION_ERROR", locale, { errors: prepared.errors });
 
@@ -169,6 +216,7 @@ export async function POST(
       p_locale: payload.locale,
       p_device: detectDevice(request.headers.get("user-agent")),
       p_draft_token: payload.draftToken ?? undefined,
+      p_photos: photos.photos.length ? photos.photos : undefined,
     })
     .single();
 

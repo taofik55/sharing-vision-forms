@@ -15,6 +15,7 @@ import {
   xlsxStream,
   type FetchBatch,
 } from "@/lib/export/stream";
+import { parseCapiSettings } from "@/lib/forms/capi";
 import { locales, defaultLocale, type Locale } from "@/lib/i18n/routing";
 import { createClient } from "@/lib/supabase/server";
 
@@ -51,7 +52,7 @@ export async function GET(
   // RLS: only forms the caller can view (no hint whether others exist).
   const { data: form } = await supabase
     .from("forms")
-    .select("id, title, current_version_id")
+    .select("id, title, current_version_id, capi_settings")
     .eq("id", id)
     .maybeSingle();
   if (!form) return Response.json({ error: "not_found" }, { status: 404 });
@@ -83,8 +84,21 @@ export async function GET(
       identifierEmail: t("columns.identifierEmail"),
       identifierPhone: t("columns.identifierPhone"),
       other: t("other"),
+      respondentCode: t("columns.respondentCode"),
+      surveyor: t("columns.surveyor"),
+      quotaCell: t("columns.quotaCell"),
+      qcStatus: t("columns.qcStatus"),
+      duration: t("columns.duration"),
+      notes: t("columns.notes"),
+      latitude: t("columns.latitude"),
+      longitude: t("columns.longitude"),
     },
     canEdit === true,
+    {
+      interview: parseCapiSettings(form.capi_settings).enabled,
+      codes: params.get("codes") === "1",
+      baseUrl: request.nextUrl.origin,
+    },
   );
 
   const fetchBatch: FetchBatch = async (cursor, limit) => {

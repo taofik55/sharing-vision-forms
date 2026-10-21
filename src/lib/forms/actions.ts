@@ -9,6 +9,12 @@ import { routing, type Locale } from "@/lib/i18n/routing";
 import { createClient } from "@/lib/supabase/server";
 import { jakartaLocalToUtcIso } from "@/lib/time";
 import type { Json } from "@/types/database";
+import {
+  capiSettingsProblems,
+  capiSettingsSchema,
+  parseCapiSettings,
+  remapCapiKeys,
+} from "./capi";
 import { hashDefinition } from "./hash";
 import { cloneDefinitionWithNewKeys } from "./operations";
 import {
@@ -36,6 +42,7 @@ export type FormActionError =
   | "slugTaken"
   | "userNotFound"
   | "ownerCannotBeMember"
+  | "invalidCapi"
   | "generic";
 
 type Fail = { ok: false; error: FormActionError };
@@ -133,6 +140,8 @@ export async function duplicateFormAction(
     .single();
   if (!profile) return fail("generic");
 
+  // New question keys: the copy is a different form with its own analytics.
+  const copy = cloneDefinitionWithNewKeys(definition.data);
   const { data, error } = await supabase
     .from("forms")
     .insert({
@@ -144,9 +153,12 @@ export async function duplicateFormAction(
       closed_message: source.closed_message,
       thank_you_message: source.thank_you_message,
       slug: uniqueSlug(title),
-      // New question keys: the copy is a different form with its own analytics.
-      draft_definition: cloneDefinitionWithNewKeys(
+      draft_definition: copy as unknown as NonNullable<Json>,
+      // Interview settings follow the new keys (quotas, respondent IDs, QC).
+      capi_settings: remapCapiKeys(
+        parseCapiSettings(source.capi_settings),
         definition.data,
+        copy,
       ) as unknown as NonNullable<Json>,
     })
     .select("id")
@@ -460,5 +472,44 @@ export async function removeMemberAction(
   if (error) return fail("generic");
   if (!data?.length) return fail("notAllowed");
   revalidateForm(parsed.data.formId);
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Interview (CAPI) settings
+// ---------------------------------------------------------------------------
+
+export async function saveCapiSettingsAction(input: {
+  formId: string;
+  settings: unknown;
+}): Promise<{ ok: true } | (Fail & { problems?: string[] })> {
+  if (!(await activeUser())) return fail("notAllowed");
+  const id = formId.safeParse(input.formId);
+  const settings = capiSettingsSchema.safeParse(input.settings);
+  if (!id.success || !settings.success) return fail("invalidInput");
+
+  const supabase = await createClient();
+  const { data: form } = await supabase
+    .from("forms")
+    .select("draft_definition")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (!form) return fail("notFound");
+  const definition = formDefinitionSchema.safeParse(form.draft_definition);
+  const problems = capiSettingsProblems(
+    settings.data,
+    definition.success ? definition.data : null,
+  );
+  if (problems.length) return { ...fail("invalidCapi"), problems };
+
+  // RLS: only people who can edit the form update it.
+  const { data, error } = await supabase
+    .from("forms")
+    .update({ capi_settings: settings.data as unknown as NonNullable<Json> })
+    .eq("id", id.data)
+    .select("id");
+  if (error) return fail("generic");
+  if (!data?.length) return fail("notAllowed");
+  revalidateForm(id.data);
   return { ok: true };
 }

@@ -12,6 +12,8 @@ export type ExportAnswer = {
   /** YYYY-MM-DD */
   d?: string;
   o?: string[];
+  /** location { lat, lng, accuracy } / photo { photoId } */
+  j?: { lat?: number; lng?: number; accuracy?: number; photoId?: string };
 };
 
 /** One row of the export_responses RPC. */
@@ -21,11 +23,19 @@ export type ExportRow = {
   version_number: number;
   identifier_email: string | null;
   identifier_phone: string | null;
+  respondent_code?: string | null;
+  surveyor?: string | null;
+  quota_cell?: string | null;
+  qc_status?: string | null;
+  duration_seconds?: number | null;
+  /** Interviewer notes by question key. */
+  notes?: Record<string, string> | null;
   answers: Record<string, ExportAnswer>;
 };
 
 export type ExportQuestion = Pick<Question, "key" | "type" | "title"> & {
-  options?: { id: string; label: string }[];
+  code?: string;
+  options?: { id: string; label: string; code?: string }[];
 };
 
 export type ExportLabels = {
@@ -36,6 +46,23 @@ export type ExportLabels = {
   identifierEmail: string;
   identifierPhone: string;
   other: string;
+  respondentCode?: string;
+  surveyor?: string;
+  quotaCell?: string;
+  qcStatus?: string;
+  duration?: string;
+  notes?: string;
+  latitude?: string;
+  longitude?: string;
+};
+
+export type ExportOptions = {
+  /** Interview columns (respondent ID, surveyor, quota cell, QC, notes). */
+  interview?: boolean;
+  /** Option answer codes (1, 2, 99) instead of labels. */
+  codes?: boolean;
+  /** Absolute base URL for photo links. */
+  baseUrl?: string;
 };
 
 export type Cell = string | number | null;
@@ -47,16 +74,18 @@ export type ExportColumn = {
   value: (row: ExportRow) => Cell;
 };
 
-/** Question headers: latest title; the short key is appended when titles collide. */
+/** Question headers: "S1. Title"; the short key is appended when titles collide. */
 export function questionHeaders(questions: ExportQuestion[]): string[] {
   const counts = new Map<string, number>();
+  const titleOf = (q: ExportQuestion) =>
+    `${q.code ? `${q.code}. ` : ""}${q.title.trim() || q.key}`;
   for (const q of questions) {
-    const title = q.title.trim() || q.key;
+    const title = titleOf(q);
     counts.set(title, (counts.get(title) ?? 0) + 1);
   }
   const used = new Set<string>();
   return questions.map((q) => {
-    const title = q.title.trim() || q.key;
+    const title = titleOf(q);
     let header =
       (counts.get(title) ?? 0) > 1 ? `${title} [${q.key.slice(0, 6)}]` : title;
     if (used.has(header)) header = `${title} [${q.key}]`;
@@ -70,19 +99,35 @@ export function answerCell(
   question: ExportQuestion,
   answer: ExportAnswer | undefined,
   otherLabel: string,
+  options: ExportOptions = {},
 ): Cell {
   if (!answer) return null;
   switch (question.type) {
     case "multiple_choice":
     case "dropdown":
-    case "checkboxes": {
+    case "checkboxes":
+    case "ranking": {
       const labels = (answer.o ?? []).map((id) => {
         if (id === OTHER_OPTION_ID)
           return answer.t ? `${otherLabel}: ${answer.t}` : otherLabel;
-        return question.options?.find((o) => o.id === id)?.label ?? id;
+        const option = question.options?.find((o) => o.id === id);
+        if (options.codes && option?.code) return option.code;
+        return option?.label ?? id;
       });
-      return labels.length ? labels.join("; ") : null;
+      if (!labels.length) return null;
+      // A single code stays a number for statistics packages.
+      if (options.codes && labels.length === 1 && /^-?\d+$/.test(labels[0]))
+        return Number(labels[0]);
+      return labels.join("; ");
     }
+    case "photo":
+      return answer.j?.photoId
+        ? `${options.baseUrl ?? ""}/api/photos/${answer.j.photoId}`
+        : null;
+    case "location":
+      return answer.j?.lat !== undefined
+        ? `${answer.j.lat}, ${answer.j.lng}`
+        : null;
     case "rating":
     case "linear_scale":
     case "number":
@@ -119,9 +164,39 @@ export function exportColumns(
   questions: ExportQuestion[],
   labels: ExportLabels,
   includeIdentifiers: boolean,
+  options: ExportOptions = {},
 ): ExportColumn[] {
   const columns: ExportColumn[] = [
     { header: labels.responseId, width: 38, value: (r) => r.id },
+    ...(options.interview
+      ? ([
+          {
+            header: labels.respondentCode ?? "respondent_code",
+            width: 14,
+            value: (r) => r.respondent_code ?? null,
+          },
+          {
+            header: labels.surveyor ?? "surveyor",
+            width: 22,
+            value: (r) => r.surveyor ?? null,
+          },
+          {
+            header: labels.quotaCell ?? "quota_cell",
+            width: 12,
+            value: (r) => r.quota_cell ?? null,
+          },
+          {
+            header: labels.qcStatus ?? "qc_status",
+            width: 12,
+            value: (r) => r.qc_status ?? null,
+          },
+          {
+            header: labels.duration ?? "duration_seconds",
+            width: 10,
+            value: (r) => r.duration_seconds ?? null,
+          },
+        ] satisfies ExportColumn[])
+      : []),
     {
       header: labels.submittedAtUtc,
       width: 26,
@@ -150,12 +225,38 @@ export function exportColumns(
   }
   const headers = questionHeaders(questions);
   questions.forEach((q, i) => {
+    if (q.type === "location") {
+      columns.push(
+        {
+          header: `${headers[i]} (${labels.latitude ?? "lat"})`,
+          width: 14,
+          value: (r) => r.answers[q.key]?.j?.lat ?? null,
+        },
+        {
+          header: `${headers[i]} (${labels.longitude ?? "lng"})`,
+          width: 14,
+          value: (r) => r.answers[q.key]?.j?.lng ?? null,
+        },
+      );
+      return;
+    }
     columns.push({
       header: headers[i],
       width: Math.min(60, Math.max(12, headers[i].length + 2)),
-      value: (r) => answerCell(q, r.answers[q.key], labels.other),
+      value: (r) => answerCell(q, r.answers[q.key], labels.other, options),
     });
   });
+  if (options.interview)
+    columns.push({
+      header: labels.notes ?? "notes",
+      width: 50,
+      value: (r) => {
+        const notes = Object.entries(r.notes ?? {});
+        if (!notes.length) return null;
+        const codeOf = new Map(questions.map((q) => [q.key, q.code ?? q.key]));
+        return notes.map(([k, v]) => `${codeOf.get(k) ?? k}: ${v}`).join(" | ");
+      },
+    });
   return columns;
 }
 

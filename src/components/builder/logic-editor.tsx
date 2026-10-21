@@ -12,9 +12,10 @@ import {
   LIMITS,
   OTHER_OPTION_ID,
   flattenQuestions,
-  isChoiceType,
+  hasOptions,
   isNumericType,
   operatorNeedsValue,
+  operatorTakesQuestion,
   operatorsForType,
   type Condition,
   type ConditionGroup,
@@ -25,15 +26,25 @@ import { cn } from "@/lib/utils";
 import { useBuilder } from "./builder-context";
 import { RADIO_ON } from "./choice-style";
 
+// Long labels ("salah satu kondisi (ATAU)") wrap inside a narrow inspector.
+const COMBINATOR =
+  "h-auto min-h-8 min-w-0 flex-1 whitespace-normal py-1 text-xs";
+
 type LogicEditorProps = {
   question: Question;
   update: (patch: Partial<Question>, coalesceKey?: string) => void;
 };
 
-function defaultCondition(ref: Question): Condition {
+export function defaultCondition(ref: Question): Condition {
   return { questionKey: ref.key, operator: "is_answered" };
 }
 
+/** "S5 · Bank operasional" for pickers. */
+export function questionLabel(q: Question, untitled: string): string {
+  return `${q.code ? `${q.code} · ` : ""}${q.title || untitled}`;
+}
+
+/** Show-if logic of one question (conditions on earlier questions). */
 export function LogicEditor({ question, update }: LogicEditorProps) {
   const t = useTranslations("builder.logic");
   const { definition } = useBuilder();
@@ -73,87 +84,105 @@ export function LogicEditor({ question, update }: LogicEditorProps) {
           {t("noEarlierQuestions")}
         </p>
       )}
-
       {group && (
-        <>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium" id="logic-combinator">
-              {t("combinator")}
-            </span>
-            {/* Two choices: radio buttons, not a dropdown. */}
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              size="sm"
-              value={group.combinator}
-              onValueChange={(value) =>
-                value &&
-                setGroup({ ...group, combinator: value as "and" | "or" })
-              }
-              aria-labelledby="logic-combinator"
-              className="w-full"
-            >
-              <ToggleGroupItem value="and" className={cn("flex-1", RADIO_ON)}>
-                {t("and")}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="or" className={cn("flex-1", RADIO_ON)}>
-                {t("or")}
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <ol className="flex flex-col gap-2">
-            {group.conditions.map((condition, index) => (
-              <ConditionRow
-                key={index}
-                index={index}
-                condition={condition}
-                earlier={earlier}
-                onChange={(next, key) =>
-                  setGroup(
-                    {
-                      ...group,
-                      conditions: group.conditions.map((c, i) =>
-                        i === index ? next : c,
-                      ),
-                    },
-                    key,
-                  )
-                }
-                onRemove={() => {
-                  const conditions = group.conditions.filter(
-                    (_, i) => i !== index,
-                  );
-                  setGroup(
-                    conditions.length ? { ...group, conditions } : undefined,
-                  );
-                }}
-              />
-            ))}
-          </ol>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="self-start"
-            disabled={
-              group.conditions.length >= LIMITS.conditions ||
-              earlier.length === 0
-            }
-            onClick={() =>
-              setGroup({
-                ...group,
-                conditions: [
-                  ...group.conditions,
-                  defaultCondition(earlier[earlier.length - 1]),
-                ],
-              })
-            }
-          >
-            <Plus aria-hidden />
-            {t("addCondition")}
-          </Button>
-        </>
+        <ConditionGroupEditor
+          idPrefix="logic"
+          group={group}
+          candidates={earlier}
+          onChange={setGroup}
+        />
       )}
+    </div>
+  );
+}
+
+/**
+ * One condition group (AND / OR of conditions on candidate questions).
+ * Shared by show-if logic and screen-out / jump rules.
+ */
+export function ConditionGroupEditor({
+  idPrefix,
+  group,
+  candidates,
+  onChange,
+}: {
+  idPrefix: string;
+  group: ConditionGroup;
+  candidates: Question[];
+  onChange: (group: ConditionGroup | undefined, coalesceKey?: string) => void;
+}) {
+  const t = useTranslations("builder.logic");
+  const last = candidates[candidates.length - 1];
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium" id={`${idPrefix}-combinator`}>
+          {t("combinator")}
+        </span>
+        {/* Two choices: radio buttons, not a dropdown. */}
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="sm"
+          value={group.combinator}
+          onValueChange={(value) =>
+            value && onChange({ ...group, combinator: value as "and" | "or" })
+          }
+          aria-labelledby={`${idPrefix}-combinator`}
+          className="w-full"
+        >
+          <ToggleGroupItem value="and" className={cn(COMBINATOR, RADIO_ON)}>
+            {t("and")}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="or" className={cn(COMBINATOR, RADIO_ON)}>
+            {t("or")}
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+      <ol className="flex flex-col gap-2">
+        {group.conditions.map((condition, index) => (
+          <ConditionRow
+            key={index}
+            index={index}
+            condition={condition}
+            earlier={candidates}
+            onChange={(next, key) =>
+              onChange(
+                {
+                  ...group,
+                  conditions: group.conditions.map((c, i) =>
+                    i === index ? next : c,
+                  ),
+                },
+                key,
+              )
+            }
+            onRemove={() => {
+              const conditions = group.conditions.filter((_, i) => i !== index);
+              onChange(
+                conditions.length ? { ...group, conditions } : undefined,
+              );
+            }}
+          />
+        ))}
+      </ol>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="self-start"
+        disabled={group.conditions.length >= LIMITS.conditions || !last}
+        onClick={() =>
+          last &&
+          onChange({
+            ...group,
+            conditions: [...group.conditions, defaultCondition(last)],
+          })
+        }
+      >
+        <Plus aria-hidden />
+        {t("addCondition")}
+      </Button>
     </div>
   );
 }
@@ -174,6 +203,13 @@ function ConditionRow({
   const t = useTranslations();
   const ref = earlier.find((q) => q.key === condition.questionKey);
   const operators = ref ? operatorsForType(ref.type) : [];
+  const untitled = t("builder.untitledQuestion");
+  const compareWith = earlier.filter(
+    (q) =>
+      hasOptions(q.type) &&
+      q.type !== "grid" &&
+      q.key !== condition.questionKey,
+  );
 
   const operatorLabel = (op: ConditionOperator) =>
     ref?.type === "date" && (op === "gt" || op === "lt")
@@ -187,7 +223,7 @@ function ConditionRow({
     >
       <div className="flex items-center gap-1">
         <Combobox
-          className="h-8 min-w-0 text-sm"
+          className="h-8 min-w-0 flex-1 text-sm"
           aria-label={t("builder.logic.question")}
           value={ref ? condition.questionKey : undefined}
           onChange={(key) => {
@@ -200,7 +236,7 @@ function ConditionRow({
           }}
           options={earlier.map((q) => ({
             value: q.key,
-            label: q.title || t("builder.untitledQuestion"),
+            label: questionLabel(q, untitled),
           }))}
           placeholder={t("builder.logic.chooseQuestion")}
           searchPlaceholder={t("builder.search")}
@@ -219,7 +255,7 @@ function ConditionRow({
       </div>
       {ref && (
         <div className="flex flex-col gap-2">
-          {/* At most six operators: radio buttons that wrap. */}
+          {/* A handful of operators: radio buttons that wrap. */}
           <ToggleGroup
             type="single"
             variant="outline"
@@ -235,7 +271,9 @@ function ConditionRow({
                 questionKey: condition.questionKey,
                 operator,
                 ...(operatorNeedsValue(operator) &&
-                condition.value !== undefined
+                condition.value !== undefined &&
+                operatorTakesQuestion(operator) ===
+                  operatorTakesQuestion(condition.operator)
                   ? { value: condition.value }
                   : {}),
               });
@@ -253,12 +291,34 @@ function ConditionRow({
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
-          {operatorNeedsValue(condition.operator) && (
-            <ValueInput
-              question={ref}
-              value={condition.value}
-              onChange={(value, key) => onChange({ ...condition, value }, key)}
+          {operatorTakesQuestion(condition.operator) ? (
+            <Combobox
+              className="h-8 text-sm"
+              aria-label={t("builder.logic.otherQuestion")}
+              value={
+                typeof condition.value === "string"
+                  ? condition.value
+                  : undefined
+              }
+              onChange={(v) => onChange({ ...condition, value: v })}
+              options={compareWith.map((q) => ({
+                value: q.key,
+                label: questionLabel(q, untitled),
+              }))}
+              placeholder={t("builder.logic.chooseQuestion")}
+              searchPlaceholder={t("builder.search")}
+              emptyText={t("builder.noMatches")}
             />
+          ) : (
+            operatorNeedsValue(condition.operator) && (
+              <ValueInput
+                question={ref}
+                value={condition.value}
+                onChange={(value, key) =>
+                  onChange({ ...condition, value }, key)
+                }
+              />
+            )
           )}
         </div>
       )}
@@ -278,11 +338,11 @@ function ValueInput({
   const t = useTranslations();
   const label = t("builder.logic.value");
 
-  if (isChoiceType(question.type)) {
+  if (hasOptions(question.type)) {
     const options = [
       ...(question.options ?? []),
       ...(question.allowOther
-        ? [{ id: OTHER_OPTION_ID, label: t("builder.other") }]
+        ? [{ id: OTHER_OPTION_ID, label: t("builder.other"), code: undefined }]
         : []),
     ];
     return (
@@ -291,7 +351,10 @@ function ValueInput({
         aria-label={label}
         value={typeof value === "string" ? value : undefined}
         onChange={(v) => onChange(v)}
-        options={options.map((o) => ({ value: o.id, label: o.label || "—" }))}
+        options={options.map((o) => ({
+          value: o.id,
+          label: `${o.code ? `${o.code} · ` : ""}${o.label || "—"}`,
+        }))}
         placeholder={t("builder.logic.chooseValue")}
         searchPlaceholder={t("builder.search")}
         emptyText={t("builder.noMatches")}

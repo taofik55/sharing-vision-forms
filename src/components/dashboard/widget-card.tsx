@@ -233,14 +233,15 @@ export function WidgetCard({
               key={b.label}
               variant={b.tone === "warning" ? "outline" : "secondary"}
               className={cn(
-                "max-w-full truncate font-normal",
+                "max-w-full justify-start font-normal",
                 b.tone === "warning" &&
                   "border-amber-500/60 text-amber-700 dark:text-amber-400",
                 b.tone === "muted" && "text-muted-foreground",
               )}
               title={b.label}
             >
-              {b.label}
+              {/* Text in a span: a flex badge does not ellipsize its own text. */}
+              <span className="truncate">{b.label}</span>
             </Badge>
           ))}
         </div>

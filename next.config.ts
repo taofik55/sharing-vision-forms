@@ -10,7 +10,8 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
+    // Location questions (interviews, public forms) read the GPS on this origin.
+    value: "camera=(), microphone=(), geolocation=(self)",
   },
   {
     key: "Strict-Transport-Security",

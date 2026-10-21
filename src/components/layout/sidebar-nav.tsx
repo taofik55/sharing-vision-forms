@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ClipboardList,
   FileText,
   FlaskConical,
   House,
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 const ICONS: Record<NavItemKey, LucideIcon> = {
   home: House,
   forms: FileText,
+  interviews: ClipboardList,
   users: Users,
   demoTools: FlaskConical,
 };

@@ -194,6 +194,7 @@ cp .env.example .env.local        # fill in the variables below
 pnpm db:reset                     # applies supabase/migrations to a fresh database
 pnpm seed                         # default workspace + DUMMY accounts
 pnpm seed:demo                    # optional: demo survey with 300 generated responses
+pnpm seed:bri                     # optional: BRI UMKM interview survey (original + 300 sample interviews)
 pnpm dev                          # http://localhost:3000
 ```
 
@@ -214,18 +215,19 @@ Full Supabase guide (hosted project, keys, migrations, Auth, Realtime, RLS check
 
 ## Scripts
 
-| Script                                    | What it does                                                                                                                                                                   |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm dev` / `build` / `start`            | Next.js                                                                                                                                                                        |
-| `pnpm lint` / `typecheck` / `format`      | ESLint, `tsc`, Prettier                                                                                                                                                        |
-| `pnpm test`                               | Vitest: unit + RLS / RPC integration tests (needs the seeded Supabase from `.env.local`)                                                                                       |
-| `pnpm e2e`                                | Playwright (starts `pnpm dev` if nothing is running); the scale test needs `ENABLE_DEMO_TOOLS=true`                                                                            |
-| `pnpm seed`                               | Idempotent seed (default workspace + DUMMY accounts); refuses non-local targets without `--allow-remote`                                                                       |
-| `pnpm seed:demo [--n 300 --days 30]`      | Demo form "Customer Satisfaction Survey (Demo)" with generated, correlated responses (`is_demo`)                                                                               |
-| `pnpm db:dummy-sql`                       | Regenerates `supabase/dummy-data.sql`: dummy accounts, forms (published / two versions / identifier / closed / archived / draft), responses and share links for the SQL editor |
-| `pnpm bench:dashboard [--sizes 1000,...]` | Grows the scale demo form to each size and times every dashboard RPC through the API (local only)                                                                              |
-| `pnpm check:secrets`                      | After `pnpm build`: fails if `SUPABASE_SECRET_KEY`, `IP_HASH_SALT` or any `sb_secret_` key is in client files                                                                  |
-| `pnpm db:start` / `db:reset` / `db:types` | Local Supabase helpers (`db:types` regenerates `src/types/database.ts`)                                                                                                        |
+| Script                                    | What it does                                                                                                                                                                                 |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev` / `build` / `start`            | Next.js                                                                                                                                                                                      |
+| `pnpm lint` / `typecheck` / `format`      | ESLint, `tsc`, Prettier                                                                                                                                                                      |
+| `pnpm test`                               | Vitest: unit + RLS / RPC integration tests (needs the seeded Supabase from `.env.local`)                                                                                                     |
+| `pnpm e2e`                                | Playwright (starts `pnpm dev` if nothing is running); the scale test needs `ENABLE_DEMO_TOOLS=true`                                                                                          |
+| `pnpm seed`                               | Idempotent seed (default workspace + DUMMY accounts); refuses non-local targets without `--allow-remote`                                                                                     |
+| `pnpm seed:demo [--n 300 --days 30]`      | Demo form "Customer Satisfaction Survey (Demo)" with generated, correlated responses (`is_demo`)                                                                                             |
+| `pnpm seed:bri [--reset] [--n 300]`       | BRI UMKM interview survey: 5 surveyors (`surveyor.jkt@formpulse.test`, also sby, bdg, smg, ygy), the original form without answers and a copy with 300 sample interviews, screen-outs and QC |
+| `pnpm db:dummy-sql`                       | Regenerates `supabase/dummy-data.sql`: dummy accounts, forms (published / two versions / identifier / closed / archived / draft), responses and share links for the SQL editor               |
+| `pnpm bench:dashboard [--sizes 1000,...]` | Grows the scale demo form to each size and times every dashboard RPC through the API (local only)                                                                                            |
+| `pnpm check:secrets`                      | After `pnpm build`: fails if `SUPABASE_SECRET_KEY`, `IP_HASH_SALT` or any `sb_secret_` key is in client files                                                                                |
+| `pnpm db:start` / `db:reset` / `db:types` | Local Supabase helpers (`db:types` regenerates `src/types/database.ts`)                                                                                                                      |
 
 Before merging: `pnpm lint && pnpm typecheck && pnpm test`, and `pnpm e2e` for UI changes.
 

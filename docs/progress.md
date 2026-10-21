@@ -457,3 +457,88 @@ Status: **done** (2026-10-16)
 - [ ] Viewer: sees the chart, no Build chart / pencil.
 - [ ] Public link: the chart renders; a chart on a free-text column shows "hidden" unless text answers are allowed.
 - [ ] Phone width: Columns / Setup / Preview tabs work; dark mode and Indonesian labels look right.
+
+## CAPI survey toolkit (BRI UMKM questionnaire, 2026-10-21)
+
+Status: **done** (2026-10-21)
+
+Source: `Draft Finalisasi Kuesioner Survei Layanan UMKM BRI.pdf` (draft v0.3, 15 Oct 2026): face-to-face interviews (CAPI), 400 UMKM respondents, quota 20 per city × sector × segment cell, modules S (screening) and A–J, QC sheet.
+
+### Plan
+
+1. **Definition schema** (`src/lib/forms/schema.ts`, still ONE schema):
+   - question `code` (S1, A2, …) and option `code` (1, 2, 97, 98, 99), option `exclusive` ("Tidak ada" clears the others);
+   - new types: `grid` (rows × columns, single or multiple per row, random row order, rows taken from another question's answer, max rows per column), `ranking` (pick up to N in order, MA-3), `location` (GPS), `photo`;
+   - `randomizeOptions`, `orderLike` (same random order as another question, G2 like G1);
+   - `optionsFrom` (carry-forward: only the options chosen in an earlier question), `autoSelectFrom` (S5 bank pre-ticked and locked in B1), `notSameAs` (D1a ≠ S5);
+   - `rules`: `terminate` (screen-out with the question code as reason) and `jump` (to a question or a section; no condition = always);
+   - condition operators `not_contains`, `same_as`, `not_same_as`;
+   - piping: `[S5]` in titles and descriptions shows the answer of the question with code S5;
+   - `noteRequired` (surveyor note must be filled).
+2. **Logic** (`logic.ts`): one flow walk shared by renderer and server: show-if, jumps, termination, carry-forward options, piping, seeded randomization.
+3. **Analytics expansion**: grid rows and ranking positions become flat "analysis questions" (`key__row` single/multiple choice, `key__r1…`) in TS (`analysisQuestions`) and SQL (`_form_question_index`), so dashboards, chart builder and export work unchanged. Location / photo are stored in `value_json` and appear only in exports and the response drawer.
+4. **CAPI mode** (form setting, not versioned): surveyors log in, run interviews at `/interviews/<form>`, each response stores surveyor, respondent ID (`SBY-F-N-07` from configurable dimensions), quota cell, surveyor notes per question, duration.
+   - New app role `surveyor` and form member role `surveyor` (fills interviews only; no dashboards).
+   - Quotas per cell (target + reserve), checked live after the configured question (S10) and enforced at submit; full cell = screen-out "quota".
+   - Screen-outs are kept in `response_screenouts` (question code, answers so far), outside the analytics tables.
+   - Offline: service worker caches the interview page; completed interviews wait in an IndexedDB outbox and sync when online.
+5. **QC** (`/forms/<id>/qc`, editors/admins): quota matrix progress, per-surveyor summary, automatic flags (duration < 12 / > 45 min, straight-lining on marked grids), "Other" > 15 % per question, screen-outs by code, backcheck sample (20 % per surveyor, uses J3 phone), approve / reject. Rejected interviews move to an archive (out of dashboards and quota counts) and can be restored.
+6. **Builder / settings UI** for everything above; export with option codes.
+7. **BRI questionnaire**: `src/lib/forms/bri-umkm.ts` (definition as in the PDF) + `pnpm seed:bri` creating two forms: the original (no responses) and a copy with 300 generated interviews that follow the skip logic, quotas and segments.
+8. Tests (unit, integration, e2e) and docs.
+
+### Assumptions
+
+- Option codes are labels for export/analysis; stored answers stay option ids (rule 5 unchanged).
+- Bank lists in S5 and Modul B differ in codes 7–13: carry-forward / not-same-as match options by label first, then by code.
+- A grid's "dipasang (MA) + utama (SA)" (C3) is modelled as two questions: C3 (checkboxes) and C3b (single choice, options from C3).
+- Combined questions (E3 SA + MA-2 reasons, F3 MA + SA, C10 two parts) are split into sub-questions with suffix codes (E3, E3_ALASAN).
+- Photos are stored in Postgres (`response_photos`, JPEG ≤ ~300 KB after client-side resize): no separate storage service needed.
+- Reserve per cell (2) = interviews accepted beyond the target, flagged "reserve", used to replace rejected ones.
+
+### What is done
+
+- **Definition schema** (`schema.ts`, still the one schema): question and option `code`, `exclusive` options, types `grid`, `ranking`, `location`, `photo`; `randomizeOptions`, `orderLike`, `optionsFrom` (carry-forward), `autoSelectFrom`, `notSameAs`, `rules` (terminate / jump, forward only), operators `not_contains`, `same_as`, `not_same_as`, `noteRequired`; new publish checks (duplicate codes, unknown / backward targets, references to later questions, grid rows, ranking size).
+- **Flow engine** (`logic.ts`): `computeFlow` walks show-if, jumps and screen-outs once for the renderer and the server; carry-forward rows / options, locked auto-selected options, piping `[S5]`, seeded random order with anchored options (exclusive, 97+) last. Server validation (`validation.ts`) checks exclusive / locked / not-same-as / ranking max / required grid rows / max per column / GPS / photo.
+- **Analytics**: grids become `key__row`, rankings `key` (mentioned) + `key__r1…`, in TS (`analysis.ts`) and SQL (`_analysis_questions` in `_form_question_index`); dashboards, chart builder, filters and export use them unchanged. GPS / photo live in `response_answers.value_json` (export and drawer only).
+- **Interview mode** (form settings, "Wawancara tatap muka (CAPI)"): app role and member role `surveyor`; `/interviews` (surveyor home: forms, my interviews today / total / screen-outs, outbox) and `/interviews/<form>` (phone-first runner: surveyor name, start time, quota cell, code-prefixed options, note field under every question, GPS button, camera photo resized to 1280 px JPEG). The public link is disabled for interview forms.
+- **Quotas and respondent IDs**: dimensions (city S10, sector S2, segment S5) map option groups to codes; live quota check after the configured question (`/api/interviews/<id>/quota`), enforced again in `submit_response` (target + reserve; `QUOTA_FULL` becomes a quota screen-out); respondent code `JKT-F-N-07` from `interview_sequences`.
+- **Screen-outs**: `response_screenouts` keeps the question code, reason, quota cell and answers so far; shown per code in QC. Public forms with screen-out rules record them too.
+- **Offline**: service worker (`public/sw.js`, production only) caches the interview pages and static assets; finished interviews go to an IndexedDB outbox and sync automatically (or with "Sync now"); the original finish time is kept (up to 14 days).
+- **QC** (`/forms/<id>/qc`, tab "Kuota & QC" for editors / admins): totals, quota matrix (count / target per cell), per-surveyor table (interviews, screen-outs, average duration, flagged, rejected, backcheck done / needed), automatic flags (duration below min / above max, straight-lining on marked grids), "Lainnya" share above the threshold per question, screen-outs per code, backcheck sample (`qc_select_backcheck`, 20 % per surveyor), approve / reject (to `response_archive`, out of dashboards and quota) / restore, per-surveyor filter.
+- **Responses and export**: respondent ID, surveyor and QC status columns, search by respondent ID; drawer shows notes, flags, GPS (rounded for viewers), photo (`/api/photos/<id>`, form viewers only); CSV / XLSX add respondent ID, surveyor, quota cell, QC status, duration, notes, GPS, and an "option codes" variant (`?codes=1`).
+- **Builder**: "Pengaturan lanjutan" in the inspector (code, grid rows / columns / source / max per column / straight-lining check, ranking size, options source / auto-select / not-same-as, screen-out and jump rules, required note), code inputs and "exclusive" toggles in option lists, previews for the new types, paste "1 Label" lines with codes.
+- **BRI questionnaire** (`src/lib/forms/bri-umkm.ts`): all modules S, A–J of the PDF with codes, STOP rules, jumps, segment routing (BRI vs non-BRI), carry-forward bank lists, grids (B4, G1, G2, I1, I2), ranking, required notes on B4, C4, C7, C8a, C10, D5, E3, G5, G6, H2, H4, H6, H7b, H8, GPS + photo in J4. Settings: 5 cities × 2 sectors × 2 segments = 20 cells of 20 + 2 reserve, 2-digit IDs, QC 12 / 45 min, backcheck 20 %, "Lainnya" 15 %.
+- **Seed** `pnpm seed:bri [--reset] [--n 300]`: five surveyors (`surveyor.<jkt|sby|bdg|smg|ygy>@formpulse.test`), form `survei-umkm-bri` (original, no answers) and `survei-umkm-bri-contoh` (300 interviews that follow the skip logic and quotas, ~45 screen-outs, 3 % too short / long, a backcheck sample with approvals and 4 rejects; 304 are interviewed so 300 stay).
+- **Tests**: unit `tests/unit/forms/{capi,bri-umkm,bri-sample}.test.ts`; integration `tests/integration/capi.test.ts` (surveyor access, 401, complete interview with code / notes / GPS / photo, required notes, rule screen-out, quota numbering and full cell, QUOTA_AVAILABLE, replay, duration flag, public submit refused, QC backcheck / approve / reject / restore, viewer denied) and the four new tables in the anon RLS checks; e2e `tests/e2e/interview.spec.ts` (surveyor on a phone: screen-out at S1, qualified path to module A with its quota cell; editor QC page).
+- UI fixes found while checking screenshots: rule conditions wrap inside the narrow inspector, QC surveyor table full width, long dashboard titles no longer squeeze the header, long widget badges are ellipsized.
+- Results: lint 0 errors (2 existing warnings), typecheck, Vitest 433 / 433 (APP_URL on a production build), Playwright 25 / 25, `supabase db reset` + `pnpm seed` + `seed:demo` + `seed:bri` from scratch, `supabase db lint --level warning` clean.
+
+### Decisions
+
+- Interview settings live in `forms.capi_settings` (not versioned): quotas and QC thresholds change during fieldwork. Duplicating a form copies them with the new question keys.
+- Surveyors never see dashboards, responses or QC (`can_view_form` excludes surveyor members); a form member with role editor must also have the app role editor to edit (`can_edit_form`).
+- Option codes are for display, export and piping; answers still store option ids. Lists that differ between questions (S5 vs B1 banks) match by label first, then code.
+- Combined PDF questions are split (C3 / C3U, C10A / C10B, E3 / E3_ALASAN, F3 / F3_APP, J3 / J3_NOMOR, J4_GPS / J4_FOTO). "99 Lainnya" is a normal option; the surveyor writes the answer in the note.
+- Photos are stored in Postgres (`response_photos`, at most 3 MB each, about 150–300 KB after resize) instead of a storage bucket: one backup, same access model. Fine for a few thousand interviews.
+- A rejected interview is moved to `response_archive` (not soft-deleted), so dashboards, summaries and quota counts need no extra filter; restore re-inserts it.
+- Quota counts include reserves (target + reserve per cell); the QC matrix shows count / target.
+
+### Known gaps
+
+- Offline needs one online visit to the interview page (cached by the service worker in production builds) and a valid session; with an expired session interviews stay in the outbox until the surveyor logs in again.
+- The PDF's QC sheet mentions B7b, which does not exist; B7 has no required note.
+- The backcheck call itself (J3 phone) happens outside the app; the result is recorded with approve / reject and a note.
+- No per-surveyor quota assignment: any assigned surveyor can fill any cell.
+- Photos are not shown on public dashboards; exports carry the GPS coordinates and the photo id, not the image.
+
+### Manual verification checklist
+
+- [ ] `pnpm seed:bri` (local), then log in as `surveyor.jkt@formpulse.test` on a phone: only "Wawancara" in the menu.
+- [ ] Start an interview on the original form: S1 = "Karyawan/anggota keluarga" shows the screen-out alert; the red button records it.
+- [ ] Qualified path: S10 Jakarta, S2 F&B, S5 BCA gives quota cell JKT-F-N; module A shows A1_F; notes under B4 and the other marked questions are required; GPS and photo in J4; finish shows an ID like JKT-F-N-01.
+- [ ] Turn the network off mid-interview and finish: "saved on this device"; network on: the outbox syncs.
+- [ ] As editor, open "Survei … (Contoh 300 jawaban)": the dashboard charts grid rows and rankings; Kuota & QC shows the matrix, surveyors and flags; pick a backcheck sample, approve, reject, restore.
+- [ ] Responses: respondent ID / surveyor columns; drawer shows notes, GPS and photo; CSV export with option codes.
+- [ ] Settings: change the quota target or a dimension; builder: edit the rule on S1 and the grid G2.
+- [ ] Hosted project: push `20261021090000_capi_roles.sql` and `20261021090100_capi_toolkit.sql` before using interview mode.

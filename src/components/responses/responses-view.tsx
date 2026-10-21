@@ -54,9 +54,18 @@ import { cn } from "@/lib/utils";
 
 type Sort = ResponseSort;
 
-type Answer = { t?: string; n?: number; d?: string; o?: string[] };
+type Answer = {
+  t?: string;
+  n?: number;
+  d?: string;
+  o?: string[];
+  j?: { lat?: number; lng?: number; accuracy?: number; photoId?: string };
+};
 type Row = {
   id: string;
+  respondent_code?: string | null;
+  surveyor?: string | null;
+  qc_status?: string | null;
   submitted_at: string;
   version_number: number;
   duration_seconds: number | null;
@@ -78,6 +87,8 @@ type Props = {
   questions: Record<string, Question>;
   /** Question keys of the current version, in order (default columns). */
   columnKeys: string[];
+  /** Interview form: respondent ID and surveyor columns. */
+  interview?: boolean;
   versions: { id: string; number: number }[];
   initialFilters: DashboardFilters;
   initialSearch: string;
@@ -85,6 +96,8 @@ type Props = {
 };
 
 const FIXED = [
+  "respondent",
+  "surveyor",
   "submitted",
   "identifier",
   "version",
@@ -174,6 +187,8 @@ export function ResponsesView(props: Props) {
         )
         .join(", ");
     if (a.n !== undefined) return format.number(a.n);
+    if (a.j?.lat !== undefined && a.j.lng !== undefined)
+      return `${a.j.lat}, ${a.j.lng}`;
     if (a.d)
       return format.dateTime(new Date(`${a.d}T00:00:00Z`), {
         dateStyle: "medium",
@@ -183,6 +198,8 @@ export function ResponsesView(props: Props) {
   };
 
   const fixedLabels: Record<(typeof FIXED)[number], string> = {
+    respondent: t("responsesTab.respondentCode"),
+    surveyor: t("responsesTab.surveyor"),
     submitted: t("responsesTab.submitted"),
     identifier: t("responsesTab.identifier"),
     version: t("responsesTab.version"),
@@ -191,7 +208,11 @@ export function ResponsesView(props: Props) {
     duration: t("responsesTab.duration"),
   };
   const columns = [
-    ...FIXED.filter((c) => !hidden.has(c)).map((c) => ({
+    ...FIXED.filter(
+      (c) =>
+        !hidden.has(c) &&
+        (props.interview || (c !== "respondent" && c !== "surveyor")),
+    ).map((c) => ({
       id: c,
       label: fixedLabels[c],
       width: c === "submitted" ? 180 : c === "identifier" ? 200 : 110,
@@ -228,6 +249,10 @@ export function ResponsesView(props: Props) {
 
   function cell(row: Row, column: string) {
     switch (column) {
+      case "respondent":
+        return row.respondent_code ?? "—";
+      case "surveyor":
+        return row.surveyor ?? "—";
       case "submitted":
         return format.dateTime(new Date(row.submitted_at), {
           dateStyle: "medium",
@@ -437,6 +462,13 @@ type Detail = {
   identifier_email: string | null;
   identifier_phone: string | null;
   identifiers_masked: boolean;
+  respondent_code?: string | null;
+  surveyor?: string | null;
+  quota_cell?: string | null;
+  is_reserve?: boolean;
+  qc_status?: string;
+  qc_flags?: string[];
+  notes?: Record<string, string>;
   answers: {
     question_key: string;
     question_type: string;
@@ -444,6 +476,7 @@ type Detail = {
     value_number: number | null;
     value_date: string | null;
     value_options: string[] | null;
+    value_json?: Answer["j"] | null;
   }[];
 };
 
@@ -489,6 +522,7 @@ function ResponseDrawer({
         n: a.value_number ?? undefined,
         d: a.value_date ?? undefined,
         o: a.value_options ?? undefined,
+        j: a.value_json ?? undefined,
       } as Answer,
     ]),
   );
@@ -541,6 +575,39 @@ function ResponseDrawer({
                   </dd>
                 </div>
               )}
+              {detail.respondent_code && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    {t("respondentCode")}
+                  </dt>
+                  <dd className="font-mono" data-testid="drawer-respondent">
+                    {detail.respondent_code}
+                    {detail.is_reserve && ` (${t("reserve")})`}
+                  </dd>
+                </div>
+              )}
+              {detail.surveyor && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    {t("surveyor")}
+                  </dt>
+                  <dd>{detail.surveyor}</dd>
+                </div>
+              )}
+              {detail.qc_flags && detail.qc_flags.length > 0 && (
+                <div className="col-span-2">
+                  <dt className="text-xs text-muted-foreground">
+                    {t("qcFlags")}
+                  </dt>
+                  <dd className="flex flex-wrap gap-1">
+                    {detail.qc_flags.map((f) => (
+                      <Badge key={f} variant="secondary">
+                        {f}
+                      </Badge>
+                    ))}
+                  </dd>
+                </div>
+              )}
               <div>
                 <dt className="text-xs text-muted-foreground">
                   {t("duration")}
@@ -556,18 +623,50 @@ function ResponseDrawer({
               {keys.map((key) => (
                 <li key={key} className="rounded-md border p-3">
                   <p className="text-xs text-muted-foreground">
+                    {questions[key]?.code && (
+                      <span className="mr-1 font-mono">
+                        {questions[key].code}
+                      </span>
+                    )}
                     {questions[key]?.title ?? key}
                   </p>
-                  <p
-                    className={cn(
-                      "mt-1 text-sm whitespace-pre-line",
-                      !answered.has(key) && "text-muted-foreground",
-                    )}
-                  >
-                    {answered.has(key)
-                      ? display(key, answered.get(key))
-                      : t("notAnswered")}
-                  </p>
+                  {answered.get(key)?.j?.photoId ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- private photo route
+                    <img
+                      src={`/api/photos/${answered.get(key)!.j!.photoId}`}
+                      alt={questions[key]?.title ?? key}
+                      className="mt-1 max-h-60 rounded-md border object-contain"
+                      data-testid="drawer-photo"
+                    />
+                  ) : answered.get(key)?.j?.lat !== undefined ? (
+                    <a
+                      className="mt-1 block font-mono text-sm text-primary underline underline-offset-2"
+                      href={`https://www.google.com/maps?q=${answered.get(key)!.j!.lat},${answered.get(key)!.j!.lng}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {display(key, answered.get(key))}
+                    </a>
+                  ) : (
+                    <p
+                      className={cn(
+                        "mt-1 text-sm whitespace-pre-line",
+                        !answered.has(key) && "text-muted-foreground",
+                      )}
+                    >
+                      {answered.has(key)
+                        ? display(key, answered.get(key))
+                        : t("notAnswered")}
+                    </p>
+                  )}
+                  {detail.notes?.[key] && (
+                    <p
+                      className="mt-2 border-l-2 pl-2 text-xs whitespace-pre-line text-muted-foreground"
+                      data-testid="drawer-note"
+                    >
+                      {t("note")}: {detail.notes[key]}
+                    </p>
+                  )}
                 </li>
               ))}
             </ol>

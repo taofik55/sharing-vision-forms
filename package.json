@@ -20,7 +20,8 @@
     "seed:demo": "node --env-file=.env.local --conditions=react-server --import tsx scripts/seed-demo.ts",
     "bench:dashboard": "node --env-file=.env.local --conditions=react-server --import tsx scripts/bench-dashboard.ts",
     "check:secrets": "node --env-file-if-exists=.env.local scripts/check-client-secrets.mjs",
-    "db:dummy-sql": "node --import tsx scripts/generate-dummy-sql.ts"
+    "db:dummy-sql": "node --import tsx scripts/generate-dummy-sql.ts",
+    "seed:bri": "node --env-file=.env.local --conditions=react-server --import tsx scripts/seed-bri.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

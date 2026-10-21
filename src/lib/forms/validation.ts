@@ -4,7 +4,18 @@
  * (see the `renderer.errors` namespace in messages/*.json).
  */
 import { z } from "zod";
-import { getVisibleKeys, isAnswerEmpty, type Answers } from "./logic";
+import {
+  effectiveOptions,
+  effectiveRows,
+  getVisibleKeys,
+  isAnswerEmpty,
+  lockedOptionIds,
+  logicContext,
+  matchOption,
+  selectedOptions,
+  type Answers,
+  type LogicContext,
+} from "./logic";
 import {
   OTHER_OPTION_ID,
   flattenQuestions,
@@ -32,6 +43,18 @@ export const ANSWER_ERROR_CODES = [
   "otherRequired",
   "tooFewSelections",
   "tooManySelections",
+  /** "None"-type option picked together with others. */
+  "exclusiveOption",
+  /** A grid row was left empty. */
+  "rowsRequired",
+  /** Too many grid rows on one column (e.g. "never used"). */
+  "tooManyInColumn",
+  /** Same answer as a question it must differ from. */
+  "sameAsOther",
+  /** An option carried over from an earlier answer was removed. */
+  "lockedOption",
+  "invalidLocation",
+  "invalidPhoto",
 ] as const;
 export type AnswerErrorCode = (typeof ANSWER_ERROR_CODES)[number];
 
@@ -96,11 +119,23 @@ function dateSchema(q: Question) {
     .refine((d) => !v.maxDate || d <= v.maxDate, { error: "dateTooLate" });
 }
 
-function choiceSchema(q: Question) {
-  const allowed = new Set((q.options ?? []).map((o) => o.id));
+/** Photo data URLs (JPEG/PNG/WebP) up to ~2 MB of base64. */
+export const MAX_PHOTO_CHARS = 2_800_000;
+const PHOTO_PATTERN =
+  /^(data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+|id:[0-9a-f-]{36})$/;
+
+function choiceSchema(q: Question, logic: LogicContext) {
+  const options = effectiveOptions(q, logic);
+  const allowed = new Set(options.map((o) => o.id));
   if (q.allowOther) allowed.add(OTHER_OPTION_ID);
-  const multiple = q.type === "checkboxes";
+  const multiple = q.type === "checkboxes" || q.type === "ranking";
+  const exclusive = new Set(
+    options.filter((o) => o.exclusive).map((o) => o.id),
+  );
+  const locked = lockedOptionIds(q, logic);
+  const other = q.notSameAs ? logic.byKey.get(q.notSameAs) : undefined;
   const v = q.validation ?? {};
+  const max = q.type === "ranking" ? (q.ranking?.max ?? allowed.size) : v.max;
 
   return z
     .strictObject(
@@ -129,11 +164,25 @@ function choiceSchema(q: Question) {
       if (selected.includes(OTHER_OPTION_ID) && !value.otherText?.trim()) {
         ctx.addIssue({ code: "custom", message: "otherRequired" });
       }
+      if (selected.length > 1 && selected.some((id) => exclusive.has(id))) {
+        ctx.addIssue({ code: "custom", message: "exclusiveOption" });
+        return;
+      }
+      if (locked.some((id) => !selected.includes(id))) {
+        ctx.addIssue({ code: "custom", message: "lockedOption" });
+        return;
+      }
       if (multiple && v.min !== undefined && selected.length < v.min) {
         ctx.addIssue({ code: "custom", message: "tooFewSelections" });
       }
-      if (multiple && v.max !== undefined && selected.length > v.max) {
+      if (multiple && max !== undefined && selected.length > max) {
         ctx.addIssue({ code: "custom", message: "tooManySelections" });
+      }
+      if (other) {
+        const picked = selectedOptions(other, logic.answers[other.key]);
+        const mine = options.filter((o) => selected.includes(o.id));
+        if (mine.some((o) => matchOption(o, picked)))
+          ctx.addIssue({ code: "custom", message: "sameAsOther" });
       }
     })
     .transform(({ selected, otherText }) =>
@@ -143,8 +192,95 @@ function choiceSchema(q: Question) {
     );
 }
 
-/** Zod schema for one question's answer, ignoring `required`. */
-export function questionValueSchema(q: Question): z.ZodType {
+function gridSchema(q: Question, logic: LogicContext, required: boolean) {
+  const rows = effectiveRows(q, logic);
+  const rowIds = new Set(rows.map((r) => r.id));
+  const columns = new Set((q.options ?? []).map((o) => o.id));
+  const exclusive = new Set(
+    (q.options ?? []).filter((o) => o.exclusive).map((o) => o.id),
+  );
+  const multiple = q.grid?.multiple ?? false;
+  const limits = q.grid?.maxPerColumn ?? [];
+  return z
+    .strictObject(
+      {
+        rows: z.record(
+          z.string().max(64),
+          z.array(z.string()).max(Math.max(columns.size, 1)),
+        ),
+      },
+      { error: "invalid" },
+    )
+    .superRefine((value, ctx) => {
+      for (const [rowId, cols] of Object.entries(value.rows)) {
+        if (
+          !rowIds.has(rowId) ||
+          cols.some((c) => !columns.has(c)) ||
+          new Set(cols).size !== cols.length
+        ) {
+          ctx.addIssue({ code: "custom", message: "invalidOption" });
+          return;
+        }
+        if (!multiple && cols.length > 1) {
+          ctx.addIssue({ code: "custom", message: "invalid" });
+          return;
+        }
+        if (cols.length > 1 && cols.some((c) => exclusive.has(c))) {
+          ctx.addIssue({ code: "custom", message: "exclusiveOption" });
+          return;
+        }
+      }
+      if (required && rows.some((r) => !value.rows[r.id]?.length)) {
+        ctx.addIssue({ code: "custom", message: "rowsRequired" });
+        return;
+      }
+      for (const limit of limits) {
+        const n = Object.values(value.rows).filter((cols) =>
+          cols.includes(limit.optionId),
+        ).length;
+        if (n > limit.max) {
+          ctx.addIssue({ code: "custom", message: "tooManyInColumn" });
+          return;
+        }
+      }
+    })
+    .transform(({ rows: answered }) => ({
+      rows: Object.fromEntries(
+        Object.entries(answered).filter(([, cols]) => cols.length > 0),
+      ),
+    }));
+}
+
+const locationSchema = z.strictObject(
+  {
+    lat: z.number({ error: "invalidLocation" }).min(-90).max(90),
+    lng: z.number({ error: "invalidLocation" }).min(-180).max(180),
+    accuracy: z.number().min(0).max(100_000).optional(),
+  },
+  { error: "invalidLocation" },
+);
+
+const photoSchema = z.strictObject(
+  {
+    photo: z
+      .string({ error: "invalidPhoto" })
+      .max(MAX_PHOTO_CHARS, { error: "invalidPhoto" })
+      .regex(PHOTO_PATTERN, { error: "invalidPhoto" }),
+  },
+  { error: "invalidPhoto" },
+);
+
+const NO_CONTEXT: LogicContext = { answers: {}, byKey: new Map() };
+
+/**
+ * Zod schema for one question's answer, ignoring `required` (except that a
+ * required grid needs every row). Carried-over options and rows come from
+ * the other answers in `logic`.
+ */
+export function questionValueSchema(
+  q: Question,
+  logic: LogicContext = NO_CONTEXT,
+): z.ZodType {
   switch (q.type) {
     case "short_text":
     case "paragraph":
@@ -177,12 +313,19 @@ export function questionValueSchema(q: Question): z.ZodType {
     case "multiple_choice":
     case "checkboxes":
     case "dropdown":
-      return choiceSchema(q);
+    case "ranking":
+      return choiceSchema(q, logic);
+    case "grid":
+      return gridSchema(q, logic, q.required);
+    case "location":
+      return locationSchema;
+    case "photo":
+      return photoSchema;
   }
 }
 
-function answerSchema(q: Question): z.ZodType {
-  const inner = questionValueSchema(q);
+function answerSchema(q: Question, logic: LogicContext): z.ZodType {
+  const inner = questionValueSchema(q, logic);
   if (q.required) {
     return z.preprocess(
       normalize,
@@ -202,11 +345,13 @@ function answerSchema(q: Question): z.ZodType {
 export function buildAnswerSchema(
   definition: FormDefinition,
   visibleKeys: Iterable<string>,
+  answers: Answers = {},
 ) {
   const keys = new Set(visibleKeys);
+  const logic = logicContext(definition, answers);
   const shape: Record<string, z.ZodType> = {};
   for (const q of flattenQuestions(definition)) {
-    if (keys.has(q.key)) shape[q.key] = answerSchema(q);
+    if (keys.has(q.key)) shape[q.key] = answerSchema(q, logic);
   }
   return z.object(shape);
 }
@@ -233,7 +378,9 @@ export function validateAnswers(
     const subset = new Set(onlyKeys);
     keys = new Set([...keys].filter((k) => subset.has(k)));
   }
-  const result = buildAnswerSchema(definition, keys).safeParse(answers);
+  const result = buildAnswerSchema(definition, keys, answers).safeParse(
+    answers,
+  );
   if (result.success) return { ok: true, data: result.data as Answers };
 
   const errors: AnswerErrors = {};

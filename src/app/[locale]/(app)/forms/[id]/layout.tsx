@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { FormStatusBadge } from "@/components/forms/form-status-badge";
 import { FormTabs, type FormTab } from "@/components/forms/form-tabs";
 import { requireFormAccess } from "@/lib/forms/access";
+import { parseCapiSettings } from "@/lib/forms/capi";
 import { Link } from "@/lib/i18n/navigation";
 import type { Locale } from "@/lib/i18n/routing";
 
@@ -18,6 +19,8 @@ export default async function FormLayout({
   const tabs: FormTab[] = canEdit
     ? ["builder", "settings", "dashboard", "responses"]
     : ["dashboard", "responses"];
+  // Interview forms: quota, QC and backcheck (editors and admins).
+  if (canEdit && parseCapiSettings(form.capi_settings).enabled) tabs.push("qc");
 
   return (
     <div className="flex flex-col gap-4">

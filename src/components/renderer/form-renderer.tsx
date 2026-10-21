@@ -1,14 +1,18 @@
 "use client";
 
-import { CircleCheck, LoaderCircle } from "lucide-react";
+import { CircleCheck, LoaderCircle, OctagonX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useRef, useState, type ReactNode } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { missingNotes, type Notes } from "@/lib/forms/capi";
 import {
-  getVisibleKeys,
-  getVisibleSections,
+  computeFlow,
+  logicContext,
+  pipeText,
   type AnswerValue,
   type Answers,
+  type Termination,
 } from "@/lib/forms/logic";
 import type { FormDefinition } from "@/lib/forms/schema";
 import { validateAnswers, type AnswerErrors } from "@/lib/forms/validation";
@@ -30,6 +34,16 @@ export type FormPagesProps = {
   onComplete: (
     answers: Answers,
   ) => Promise<AnswerErrors | null> | AnswerErrors | null;
+  /** A screening rule ended the form: answers so far + the reason. */
+  onScreenOut?: (answers: Answers, termination: Termination) => void;
+  /**
+   * Before leaving a page (interviews: live quota check). Return a
+   * termination to end the interview instead of moving on.
+   */
+  beforeNext?: (
+    sectionId: string,
+    answers: Answers,
+  ) => Promise<Termination | null>;
   submitting?: boolean;
   /** Rendered between the header and the questions (notices, banners). */
   banner?: ReactNode;
@@ -41,11 +55,22 @@ export type FormPagesProps = {
     onChange: (value: string) => void;
     label: string;
   };
+  /** Random order of options / rows for this interview. */
+  seed?: string;
+  /** Interviews: question and option codes. */
+  showCodes?: boolean;
+  /** Interviews: a note per question (required where the question says so). */
+  notes?: { value: Notes; onChange: (notes: Notes) => void };
+  /** Interviews: capture GPS automatically. */
+  autoLocate?: boolean;
+  /** Label of the final button (default "Submit"). */
+  submitLabel?: string;
 };
 
 /**
- * One section per page, live conditional logic, per-page validation with the
- * shared answer schema. Controlled: the parent owns answers and page.
+ * One section per page, live conditional logic (show-if, jumps, screen-outs),
+ * per-page validation with the shared answer schema. Controlled: the parent
+ * owns answers and page.
  */
 export function FormPages({
   definition,
@@ -56,24 +81,46 @@ export function FormPages({
   sectionId,
   onSectionChange,
   onComplete,
+  onScreenOut,
+  beforeNext,
   submitting = false,
   banner,
   headerExtra,
   honeypot,
+  seed,
+  showCodes = false,
+  notes,
+  autoLocate = false,
+  submitLabel,
 }: FormPagesProps) {
   const t = useTranslations("renderer");
   const tp = useTranslations("publicForm");
   const [errors, setErrors] = useState<AnswerErrors>({});
+  const [noteErrors, setNoteErrors] = useState<string[]>([]);
+  const [checking, setChecking] = useState(false);
+  const [blocked, setBlocked] = useState<Termination | null>(null);
   const topRef = useRef<HTMLFormElement>(null);
 
-  const visibleSections = useMemo(
-    () => getVisibleSections(definition, answers),
+  const flow = useMemo(
+    () => computeFlow(definition, answers),
     [definition, answers],
   );
   const visibleKeys = useMemo(
-    () => getVisibleKeys(definition, answers),
+    () => new Set(flow.visible.map((q) => q.key)),
+    [flow],
+  );
+  const visibleSections = useMemo(
+    () =>
+      definition.sections.filter((s) =>
+        s.questions.some((q) => visibleKeys.has(q.key)),
+      ),
+    [definition, visibleKeys],
+  );
+  const logic = useMemo(
+    () => logicContext(definition, answers),
     [definition, answers],
   );
+  const termination = blocked ?? flow.terminated ?? null;
 
   // Track the page by section id so logic changes do not jump pages.
   let index = visibleSections.findIndex((s) => s.id === sectionId);
@@ -81,12 +128,18 @@ export function FormPages({
   const section = visibleSections[index];
   const total = visibleSections.length;
   const isLast = index >= total - 1;
+  // The page that holds the terminating question ends the form.
+  const endsHere =
+    termination !== null &&
+    (blocked !== null ||
+      section?.questions.some((q) => q.key === termination.questionKey));
 
   function setAnswer(key: string, value: AnswerValue | undefined) {
     const next = { ...answers };
     if (value === undefined) delete next[key];
     else next[key] = value;
     onAnswersChange(next);
+    setBlocked(null);
     if (errors[key]) {
       const rest = { ...errors };
       delete rest[key];
@@ -94,14 +147,24 @@ export function FormPages({
     }
   }
 
+  function setNote(key: string, value: string) {
+    if (!notes) return;
+    const next = { ...notes.value };
+    if (value) next[key] = value;
+    else delete next[key];
+    notes.onChange(next);
+    if (noteErrors.includes(key))
+      setNoteErrors(noteErrors.filter((k) => k !== key));
+  }
+
   function goTo(id: string | null) {
     onSectionChange(id);
     topRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
-  function focusFirstError(errs: AnswerErrors) {
+  function focusFirstError(keys: string[]) {
     requestAnimationFrame(() => {
-      const key = Object.keys(errs)[0];
+      const key = keys[0];
       document
         .querySelector<HTMLElement>(
           `[data-question-key="${key}"] input, [data-question-key="${key}"] textarea, [data-question-key="${key}"] button`,
@@ -110,41 +173,89 @@ export function FormPages({
     });
   }
 
-  function showErrors(errs: AnswerErrors) {
+  function showErrors(errs: AnswerErrors, missing: string[] = []) {
     setErrors(errs);
+    setNoteErrors(missing);
+    const keys = [...Object.keys(errs), ...missing];
     // Jump to the first page that has an error.
     const target = visibleSections.find((s) =>
-      s.questions.some((q) => errs[q.key]),
+      s.questions.some((q) => keys.includes(q.key)),
     );
     if (target && target.id !== section?.id) goTo(target.id);
-    focusFirstError(errs);
+    focusFirstError(keys);
+  }
+
+  function validateKeys(keys: string[]): boolean {
+    const result = validateAnswers(definition, answers, keys);
+    const missing = notes
+      ? missingNotes(
+          definition,
+          keys.filter((k) => visibleKeys.has(k)),
+          notes.value,
+        )
+      : [];
+    if (result.ok && !missing.length) {
+      setErrors({});
+      setNoteErrors([]);
+      return true;
+    }
+    showErrors(result.ok ? {} : result.errors, missing);
+    return false;
   }
 
   function validatePage(): boolean {
     if (!section) return true;
-    const result = validateAnswers(
-      definition,
-      answers,
-      section.questions.map((q) => q.key),
-    );
-    if (result.ok) {
-      setErrors({});
-      return true;
+    return validateKeys(section.questions.map((q) => q.key));
+  }
+
+  async function next() {
+    if (!section || !validatePage()) return;
+    if (beforeNext) {
+      setChecking(true);
+      try {
+        const stop = await beforeNext(section.id, answers);
+        if (stop) {
+          setBlocked(stop);
+          return;
+        }
+      } finally {
+        setChecking(false);
+      }
     }
-    showErrors(result.errors);
-    return false;
+    goTo(visibleSections[index + 1]?.id ?? null);
   }
 
   async function submit() {
     if (!validatePage()) return;
     const all = validateAnswers(definition, answers);
-    if (!all.ok) {
-      showErrors(all.errors);
+    const missing = notes
+      ? missingNotes(definition, visibleKeys, notes.value)
+      : [];
+    if (!all.ok || missing.length) {
+      showErrors(all.ok ? {} : all.errors, missing);
       return;
     }
     const serverErrors = await onComplete(all.data);
     if (serverErrors && Object.keys(serverErrors).length)
       showErrors(serverErrors);
+  }
+
+  function screenOut() {
+    if (!termination) return;
+    // Questions on the screening page up to the reason must be valid.
+    const keys = flow.visible.map((q) => q.key);
+    if (
+      !validateKeys(
+        section
+          ? section.questions.map((q) => q.key).filter((k) => keys.includes(k))
+          : [],
+      )
+    )
+      return;
+    const kept = Object.fromEntries(
+      Object.entries(answers).filter(([k]) => keys.includes(k)),
+    );
+    onScreenOut?.(kept, termination);
   }
 
   return (
@@ -154,9 +265,10 @@ export function FormPages({
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        if (submitting) return;
-        if (isLast) void submit();
-        else if (validatePage()) goTo(visibleSections[index + 1]?.id ?? null);
+        if (submitting || checking) return;
+        if (endsHere) screenOut();
+        else if (isLast) void submit();
+        else void next();
       }}
       data-testid="form-renderer"
     >
@@ -210,7 +322,7 @@ export function FormPages({
               </h2>
               {section.description && (
                 <p className="text-sm whitespace-pre-line text-muted-foreground">
-                  {section.description}
+                  {pipeText(section.description, definition, answers)}
                 </p>
               )}
             </div>
@@ -224,9 +336,42 @@ export function FormPages({
                 value={answers[q.key]}
                 error={errors[q.key]}
                 onChange={(value) => setAnswer(q.key, value)}
+                logic={logic}
+                seed={seed}
+                title={pipeText(q.title, definition, answers)}
+                description={
+                  q.description
+                    ? pipeText(q.description, definition, answers)
+                    : undefined
+                }
+                showCodes={showCodes}
+                autoLocate={autoLocate}
+                note={
+                  notes
+                    ? {
+                        value: notes.value[q.key] ?? "",
+                        onChange: (v) => setNote(q.key, v),
+                        required: q.noteRequired ?? false,
+                        missing: noteErrors.includes(q.key),
+                      }
+                    : undefined
+                }
               />
             ))}
         </section>
+      )}
+
+      {endsHere && termination && (
+        <Alert variant="destructive" data-testid="screen-out">
+          <OctagonX aria-hidden />
+          <AlertTitle>{t("screenOutTitle")}</AlertTitle>
+          <AlertDescription>
+            {termination.reason ||
+              (termination.code
+                ? t("screenOutCode", { code: termination.code })
+                : t("screenOutDefault"))}
+          </AlertDescription>
+        </Alert>
       )}
 
       {honeypot && (
@@ -258,6 +403,8 @@ export function FormPages({
             disabled={submitting}
             onClick={() => {
               setErrors({});
+              setNoteErrors([]);
+              setBlocked(null);
               goTo(visibleSections[index - 1]?.id ?? null);
             }}
           >
@@ -269,11 +416,26 @@ export function FormPages({
         <Button
           type="submit"
           size="lg"
-          disabled={submitting}
-          data-testid={isLast ? "submit-form" : "next-page"}
+          variant={endsHere ? "destructive" : "default"}
+          disabled={submitting || checking}
+          data-testid={
+            endsHere
+              ? "screen-out-submit"
+              : isLast
+                ? "submit-form"
+                : "next-page"
+          }
         >
-          {submitting && <LoaderCircle className="animate-spin" aria-hidden />}
-          {submitting ? tp("submitting") : isLast ? t("submit") : t("next")}
+          {(submitting || checking) && (
+            <LoaderCircle className="animate-spin" aria-hidden />
+          )}
+          {submitting
+            ? tp("submitting")
+            : endsHere
+              ? t("screenOutSubmit")
+              : isLast
+                ? (submitLabel ?? t("submit"))
+                : t("next")}
         </Button>
       </div>
     </form>
@@ -299,7 +461,7 @@ export function FormRenderer({
   const t = useTranslations("renderer");
   const [answers, setAnswers] = useState<Answers>({});
   const [sectionId, setSectionId] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<"complete" | "screened" | false>(false);
   const [run, setRun] = useState(0);
 
   if (done) {
@@ -311,7 +473,9 @@ export function FormRenderer({
         <CircleCheck className="size-10 text-primary" aria-hidden />
         <h2 className="text-xl font-semibold">{title}</h2>
         <p className="whitespace-pre-line">
-          {thankYouMessage || t("thankYouDefault")}
+          {done === "screened"
+            ? t("screenOutDone")
+            : thankYouMessage || t("thankYouDefault")}
         </p>
         <p className="text-sm text-muted-foreground">{t("previewSubmitted")}</p>
         <Button
@@ -340,9 +504,12 @@ export function FormRenderer({
       sectionId={sectionId}
       onSectionChange={setSectionId}
       onComplete={() => {
-        setDone(true);
+        setDone("complete");
         return null;
       }}
+      onScreenOut={() => setDone("screened")}
+      seed={"preview-" + run}
+      showCodes
     />
   );
 }

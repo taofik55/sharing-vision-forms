@@ -22,11 +22,20 @@ import {
 import {
   LIMITS,
   QUESTION_TYPES,
+  hasOptions,
   type Question,
   type QuestionType,
   type Section,
   type ValidationRules,
 } from "@/lib/forms/schema";
+import {
+  CodeSetting,
+  GridSettings,
+  NoteSetting,
+  OptionSourceSettings,
+  RankingSettings,
+  RulesEditor,
+} from "./advanced-settings";
 import { useBuilder } from "./builder-context";
 import { cn } from "@/lib/utils";
 import { RADIO_ON } from "./choice-style";
@@ -227,6 +236,29 @@ function QuestionInspector({
         />
       </div>
 
+      <CodeSetting question={question} update={update} />
+
+      {question.type === "ranking" && (
+        <>
+          <Separator />
+          <RankingSettings question={question} update={update} />
+        </>
+      )}
+
+      {question.type === "grid" && (
+        <>
+          <Separator />
+          <GridSettings question={question} update={update} />
+        </>
+      )}
+
+      {hasOptions(question.type) && (
+        <>
+          <Separator />
+          <OptionSourceSettings question={question} update={update} />
+        </>
+      )}
+
       {question.type === "linear_scale" && (
         <>
           <Separator />
@@ -259,6 +291,12 @@ function QuestionInspector({
         <h3 className="text-sm font-semibold">{t("builder.logic.title")}</h3>
         <LogicEditor question={question} update={update} />
       </div>
+
+      <Separator />
+      <RulesEditor question={question} update={update} />
+
+      <Separator />
+      <NoteSetting question={question} update={update} />
 
       <Separator />
       <div className="flex flex-col gap-1">

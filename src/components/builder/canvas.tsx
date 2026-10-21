@@ -11,6 +11,7 @@ import {
   ArrowDown,
   ArrowUp,
   CalendarDays,
+  Camera,
   ChevronsUpDown,
   CircleAlert,
   CircleDot,
@@ -19,6 +20,7 @@ import {
   GitBranch,
   GripVertical,
   ListFilter,
+  MapPin,
   Plus,
   Star,
   Trash2,
@@ -53,7 +55,7 @@ import {
 } from "@/lib/forms/operations";
 import {
   LIMITS,
-  isChoiceType,
+  hasOptions,
   supportsPlaceholder,
   type Question,
   type QuestionType,
@@ -352,6 +354,11 @@ export function QuestionCard({
             {t(`questionTypes.${question.type}`)}
           </span>
           <span className="font-medium break-words">
+            {question.code && (
+              <span className="mr-1.5 font-mono text-sm text-muted-foreground">
+                {question.code}
+              </span>
+            )}
             {title}
             {question.required && (
               <span
@@ -579,11 +586,11 @@ function InlineEditor({
         </div>
       )}
 
-      {isChoiceType(question.type) && (
+      {hasOptions(question.type) && (
         <OptionsEditor question={question} update={update} />
       )}
 
-      {!isChoiceType(question.type) && !supportsPlaceholder(question.type) && (
+      {!hasOptions(question.type) && !supportsPlaceholder(question.type) && (
         <div className="flex flex-col gap-1.5">
           <FieldPreview question={question} />
           <p className="text-xs text-muted-foreground">
@@ -685,6 +692,81 @@ function FieldPreview({ question }: { question: Question }) {
               {t("builder.other")}
             </span>
           )}
+        </span>
+      );
+    case "ranking":
+      return (
+        <span aria-hidden className="flex flex-col gap-1.5">
+          {shown.map((o, i) => (
+            <span key={o.id} className="flex items-center gap-2 text-sm">
+              <span className="flex size-5 items-center justify-center rounded-full border text-xs text-muted-foreground">
+                {i + 1}
+              </span>
+              <span className="line-clamp-1">{o.label || "—"}</span>
+            </span>
+          ))}
+          <span className="text-xs text-muted-foreground">
+            {t("builder.card.rankingSummary", {
+              max: question.ranking?.max ?? 3,
+              count: options.length,
+            })}
+          </span>
+        </span>
+      );
+    case "grid": {
+      const rows = question.grid?.rows ?? [];
+      return (
+        <span
+          aria-hidden
+          className="flex w-full max-w-md flex-col gap-1 text-xs"
+        >
+          <span className="flex gap-1 pl-[40%] text-muted-foreground">
+            {options.slice(0, 5).map((o) => (
+              <span key={o.id} className="flex-1 truncate text-center">
+                {o.label}
+              </span>
+            ))}
+          </span>
+          {(question.grid?.rowsFrom ? [] : rows.slice(0, 4)).map((r) => (
+            <span key={r.id} className="flex items-center gap-1">
+              <span className="w-[40%] truncate">{r.label}</span>
+              {options.slice(0, 5).map((o) => (
+                <span key={o.id} className="flex flex-1 justify-center">
+                  <span
+                    className={cn(
+                      "size-3.5 border-2 border-muted-foreground/50",
+                      question.grid?.multiple
+                        ? "rounded-[3px]"
+                        : "rounded-full",
+                    )}
+                  />
+                </span>
+              ))}
+            </span>
+          ))}
+          <span className="text-muted-foreground">
+            {question.grid?.rowsFrom
+              ? t("builder.card.rowsFromSummary")
+              : t("builder.card.gridSummary", {
+                  rows: rows.length,
+                  columns: options.length,
+                })}
+          </span>
+        </span>
+      );
+    }
+    case "location":
+      return (
+        <span aria-hidden className={cn(box, "h-9 max-w-64 gap-2")}>
+          <MapPin className="size-4" />
+          {t("builder.card.locationPreview")}
+        </span>
+      );
+    case "photo":
+      return (
+        <span aria-hidden className={cn(box, "h-9 max-w-64 gap-2")}>
+          <Camera className="size-4" />
+          {t("builder.card.photoPreview")}
         </span>
       );
     case "rating":
